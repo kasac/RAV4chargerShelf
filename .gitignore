@@ -1,0 +1,16 @@
+# generated parts, previews and reports (CI uploads them as the "fit-coupon" artifact)
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+build/
+dist/
+
+# Rhino / Grasshopper backups and locks
+*.3dmbak
+*.rhl
+*.ghbak

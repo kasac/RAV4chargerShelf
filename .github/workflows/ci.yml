@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 = the CPython inside Rhino 8
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install test tools
+        run: python -m pip install pytest numpy trimesh
+      - name: Run tests (pure-Python modules + mocked Rhino layer)
+        run: python -m pytest -q
+
+  fit-coupon:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build fit coupon, previews and report (no Rhino)
+        run: python tools/rav4shelf.py all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fit-coupon
+          path: out/

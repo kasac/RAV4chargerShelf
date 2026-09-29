@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rav4shelf"
+version = "0.1.0"
+description = "Parametric 3D-printable second-level shelf for the Toyota RAV4 XA50 charger cubby"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest", "numpy", "trimesh"]
+
+[project.scripts]
+rav4shelf = "rav4shelf.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

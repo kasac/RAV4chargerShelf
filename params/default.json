@@ -1,0 +1,279 @@
+{
+  "_format": "rav4shelf-params-v1",
+  "_readme": [
+    "Single source of truth for every dimension. Units are millimetres and degrees.",
+    "Do NOT put your measurements here. Put them in params/measured.json as a flat",
+    "{\"name\": value} object (see params/measured.example.json). That file is picked",
+    "up automatically by the CLI, rhino/build_all.py and the Grasshopper Params component.",
+    "\"placeholder\": true marks a GUESS that must be measured or decided before it can be",
+    "trusted. The build report lists every placeholder that is still in use.",
+    "Coordinates: x = right (seen from the driver), y = from the front lip into the dash,",
+    "z = up from the Qi pad surface. See docs/measuring.md."
+  ],
+  "params": {
+    "W_top": {
+      "group": "cubby", "type": "float", "value": 200.0, "unit": "mm", "min": 80, "max": 350,
+      "placeholder": true,
+      "doc": "Cubby inner width just below the roof, measured 10 mm behind the front lip."
+    },
+    "W_bottom": {
+      "group": "cubby", "type": "float", "value": 196.0, "unit": "mm", "min": 80, "max": 350,
+      "placeholder": true,
+      "doc": "Cubby inner width just above the Qi pad surface, measured 10 mm behind the front lip."
+    },
+    "W_rear_delta": {
+      "group": "cubby", "type": "float", "value": 0.0, "unit": "mm", "min": -40, "max": 40,
+      "placeholder": true,
+      "doc": "Width 10 mm in front of the rear wall minus width 10 mm behind the lip, both at shelf height. Negative = cubby narrows toward the rear."
+    },
+    "D_cubby": {
+      "group": "cubby", "type": "float", "value": 130.0, "unit": "mm", "min": 40, "max": 300,
+      "placeholder": true,
+      "doc": "Depth from the front lip to the rear wall, at shelf height."
+    },
+    "H_cubby": {
+      "group": "cubby", "type": "float", "value": 75.0, "unit": "mm", "min": 20, "max": 200,
+      "placeholder": true,
+      "doc": "Height from the Qi pad surface to the roof (lowest point of the roof above the shelf area)."
+    },
+    "R_rear_corner": {
+      "group": "cubby", "type": "float", "value": 5.0, "unit": "mm", "min": 0, "max": 30,
+      "placeholder": true,
+      "doc": "Inner radius where the side walls meet the rear wall, seen from above (0 = sharp corner)."
+    },
+    "W_lip": {
+      "group": "cubby", "type": "float", "value": 200.0, "unit": "mm", "min": 60, "max": 350,
+      "placeholder": true,
+      "doc": "Narrowest width of the opening at the front lip, at shelf height. Only used to check that the shelf can be inserted flat."
+    },
+
+    "H_ports_top": {
+      "group": "ports", "type": "float", "value": 40.0, "unit": "mm", "min": 0, "max": 150,
+      "placeholder": true,
+      "doc": "Highest point of the plugs WITH your real adapters and cables inserted, above the Qi pad. Measure your longest 12 V adapter."
+    },
+    "H_ports_bottom": {
+      "group": "ports", "type": "float", "value": 15.0, "unit": "mm", "min": 0, "max": 150,
+      "placeholder": true,
+      "doc": "Lowest point of the plug cluster above the Qi pad. Preview only."
+    },
+    "X_ports": {
+      "group": "ports", "type": "float", "value": 0.0, "unit": "mm", "min": -150, "max": 150,
+      "placeholder": true,
+      "doc": "Lateral centre of the port cluster, from the cubby centreline (+ = right as seen from the driver)."
+    },
+    "W_ports": {
+      "group": "ports", "type": "float", "value": 60.0, "unit": "mm", "min": 0, "max": 250,
+      "placeholder": true,
+      "doc": "Lateral width of the port cluster including plugs, adapters and cables."
+    },
+    "D_ports": {
+      "group": "ports", "type": "float", "value": 45.0, "unit": "mm", "min": 0, "max": 200,
+      "placeholder": true,
+      "doc": "How far plugs, adapters and cable bends stick out from the rear wall into the cubby."
+    },
+
+    "qi_center_x": {
+      "group": "phone", "type": "float", "value": 0.0, "unit": "mm", "min": -150, "max": 150,
+      "placeholder": true,
+      "doc": "Lateral centre of the Qi charging spot (where the phone lies)."
+    },
+    "qi_center_y": {
+      "group": "phone", "type": "float", "value": 65.0, "unit": "mm", "min": 0, "max": 300,
+      "placeholder": true,
+      "doc": "Distance from the front lip to the centre of the Qi charging spot."
+    },
+    "phone_length": {
+      "group": "phone", "type": "float", "value": 165.0, "unit": "mm", "min": 50, "max": 250,
+      "placeholder": true,
+      "doc": "Phone length incl. case. The phone is assumed to lie crosswise (long side along x)."
+    },
+    "phone_width": {
+      "group": "phone", "type": "float", "value": 78.0, "unit": "mm", "min": 30, "max": 150,
+      "placeholder": true,
+      "doc": "Phone width incl. case."
+    },
+    "phone_thickness": {
+      "group": "phone", "type": "float", "value": 11.0, "unit": "mm", "min": 3, "max": 40,
+      "placeholder": true,
+      "doc": "Phone thickness incl. case and camera bump."
+    },
+
+    "shelf_height": {
+      "group": "fit", "type": "float", "value": 52.0, "unit": "mm", "min": 5, "max": 190,
+      "placeholder": true,
+      "doc": "Height of the shelf's TOP surface above the Qi pad. Decide after measuring H_ports_top and H_cubby."
+    },
+    "front_recess": {
+      "group": "fit", "type": "float", "value": 8.0, "unit": "mm", "min": 0, "max": 60,
+      "doc": "How far the shelf's front edge sits behind the front lip (hides the shelf, looks closer to stock)."
+    },
+    "rear_gap": {
+      "group": "fit", "type": "float", "value": 1.0, "unit": "mm", "min": 0, "max": 20,
+      "doc": "Gap between the shelf's rear edge and the rear wall."
+    },
+    "side_gap": {
+      "group": "fit", "type": "float", "value": 0.5, "unit": "mm", "min": -1, "max": 5,
+      "doc": "Gap per side between shelf edge and side wall. Tune with the fit coupon. Negative = interference (press fit). Use the pad thickness if you add felt/foam."
+    },
+    "corner_radius_front": {
+      "group": "fit", "type": "float", "value": 4.0, "unit": "mm", "min": 0, "max": 30,
+      "doc": "Corner radius of the shelf's front corners (cosmetic)."
+    },
+    "port_notch_width": {
+      "group": "fit", "type": "float", "value": 76.0, "unit": "mm", "min": 0, "max": 250,
+      "doc": "Width of the cut-out in the shelf's rear edge over the port cluster. 0 disables the notch."
+    },
+    "port_notch_depth": {
+      "group": "fit", "type": "float", "value": 50.0, "unit": "mm", "min": 0, "max": 200,
+      "doc": "How far the notch reaches forward into the shelf, from its rear edge. (The brief's port_notch_height: the notch is a through-cut, so it has a depth, not a height.)"
+    },
+    "port_notch_offset_x": {
+      "group": "fit", "type": "float", "value": 0.0, "unit": "mm", "min": -100, "max": 100,
+      "doc": "Lateral shift of the notch centre relative to X_ports."
+    },
+    "port_notch_radius": {
+      "group": "fit", "type": "float", "value": 3.0, "unit": "mm", "min": 0, "max": 20,
+      "doc": "Corner radius of the notch."
+    },
+    "port_clearance": {
+      "group": "fit", "type": "float", "value": 3.0, "unit": "mm", "min": 0, "max": 20,
+      "doc": "Minimum air gap the checks demand around plugs and cables."
+    },
+    "phone_clearance_min": {
+      "group": "fit", "type": "float", "value": 20.0, "unit": "mm", "min": 5, "max": 100,
+      "doc": "Minimum free height under the lowest part of the shelf, for the phone on the Qi pad plus room to slide it in and out."
+    },
+
+    "wall_thickness": {
+      "group": "strength", "type": "float", "value": 2.0, "unit": "mm", "min": 0.8, "max": 6,
+      "doc": "Thickness of the shelf skirt, ribs and drawer walls."
+    },
+    "deck_thickness": {
+      "group": "strength", "type": "float", "value": 2.4, "unit": "mm", "min": 1.0, "max": 8,
+      "doc": "Thickness of the perforated deck."
+    },
+    "frame_width": {
+      "group": "strength", "type": "float", "value": 8.0, "unit": "mm", "min": 3, "max": 30,
+      "doc": "Width of the solid rim around the grid, seen from above."
+    },
+    "frame_height": {
+      "group": "strength", "type": "float", "value": 8.0, "unit": "mm", "min": 2, "max": 30,
+      "doc": "Height of the solid edge band, from the deck top down (skirt). This band is what touches the side walls."
+    },
+    "rib_count": {
+      "group": "strength", "type": "int", "value": 2, "unit": "", "min": 0, "max": 10,
+      "doc": "Number of stiffening ribs under the deck, running side to side."
+    },
+    "rib_height": {
+      "group": "strength", "type": "float", "value": 5.0, "unit": "mm", "min": 0, "max": 30,
+      "doc": "Rib height below the deck."
+    },
+
+    "grid_style": {
+      "group": "perforation", "type": "choice", "value": "hex",
+      "choices": ["hex", "square", "diamond", "round", "slot", "triangle"],
+      "doc": "Perforation pattern."
+    },
+    "cell_size": {
+      "group": "perforation", "type": "float", "value": 8.0, "unit": "mm", "min": 3, "max": 40,
+      "doc": "Opening size of one grid cell (across flats for hex)."
+    },
+    "bar_width": {
+      "group": "perforation", "type": "float", "value": 1.8, "unit": "mm", "min": 0.8, "max": 10,
+      "doc": "Width of the web between openings. At least 2 perimeters of your nozzle."
+    },
+    "grid_angle": {
+      "group": "perforation", "type": "float", "value": 0.0, "unit": "deg", "min": -90, "max": 90,
+      "doc": "Rotation of the grid pattern."
+    },
+    "grid_enabled_shelf": {
+      "group": "perforation", "type": "bool", "value": true,
+      "doc": "Perforate the shelf deck."
+    },
+    "grid_enabled_drawer_floor": {
+      "group": "perforation", "type": "bool", "value": true,
+      "doc": "Perforate the drawer floor."
+    },
+
+    "drawer_type": {
+      "group": "drawer", "type": "choice", "value": "flip", "choices": ["flip", "slide"],
+      "doc": "flip = tip-out drawer on a hinge; slide = pull-out drawer on rails."
+    },
+    "drawer_width": {
+      "group": "drawer", "type": "float", "value": null, "auto": true, "unit": "mm", "min": 20, "max": 340,
+      "doc": "Outer drawer width. null = derive from the shelf."
+    },
+    "drawer_depth": {
+      "group": "drawer", "type": "float", "value": null, "auto": true, "unit": "mm", "min": 20, "max": 280,
+      "doc": "Outer drawer depth. null = derive from the shelf."
+    },
+    "drawer_height": {
+      "group": "drawer", "type": "float", "value": null, "auto": true, "unit": "mm", "min": 8, "max": 180,
+      "doc": "Outer drawer height. null = derive from the free space above the shelf."
+    },
+    "hinge_position": {
+      "group": "drawer", "type": "choice", "value": "front_bottom", "choices": ["front_bottom", "front_top"],
+      "doc": "Pivot axis of the flip drawer. front_bottom = tip-out bin whose top tilts toward the driver."
+    },
+    "open_angle": {
+      "group": "drawer", "type": "float", "value": 35.0, "unit": "deg", "min": 10, "max": 90,
+      "doc": "Flip drawer: rotation at the open end stop."
+    },
+    "detent_strength": {
+      "group": "drawer", "type": "float", "value": 0.3, "unit": "mm", "min": 0, "max": 1.0,
+      "doc": "Snap/detent interference. Higher = firmer latch."
+    },
+    "pin_diameter": {
+      "group": "drawer", "type": "float", "value": 3.0, "unit": "mm", "min": 1.75, "max": 6,
+      "doc": "Hinge pin diameter (printed pin, or 1.75 / 2.85 mm filament). No metal near the Qi coil."
+    },
+
+    "clearance_sliding": {
+      "group": "tolerances", "type": "float", "value": 0.3, "unit": "mm", "min": 0, "max": 1.5,
+      "doc": "Gap per side for sliding fits (drawer on rails). Tune me for your printer."
+    },
+    "clearance_hinge": {
+      "group": "tolerances", "type": "float", "value": 0.4, "unit": "mm", "min": 0, "max": 1.5,
+      "doc": "Radial gap for hinge pins and knuckles. Tune me."
+    },
+    "clearance_press_fit": {
+      "group": "tolerances", "type": "float", "value": 0.15, "unit": "mm", "min": -0.3, "max": 1.0,
+      "doc": "Gap for parts that are pressed together. Tune me."
+    },
+
+    "coupon_plate_thickness": {
+      "group": "coupon", "type": "float", "value": 1.2, "unit": "mm", "min": 0.4, "max": 4,
+      "doc": "Fit coupon: thickness of the flat outline plate (a few layers)."
+    },
+    "coupon_flange_width": {
+      "group": "coupon", "type": "float", "value": 8.0, "unit": "mm", "min": 2, "max": 40,
+      "doc": "Fit coupon: width of the plate ring, measured inward from the outline. The centre is open."
+    },
+    "coupon_rim_width": {
+      "group": "coupon", "type": "float", "value": 1.6, "unit": "mm", "min": 0.8, "max": 6,
+      "doc": "Fit coupon: wall thickness of the rim that stands on the outline."
+    },
+    "coupon_rim_height": {
+      "group": "coupon", "type": "float", "value": null, "auto": true, "unit": "mm", "min": 1, "max": 40,
+      "doc": "Fit coupon: rim height incl. the plate. null = frame_height, so the coupon has the same edge band as the real shelf."
+    },
+
+    "min_bar_width": {
+      "group": "checks", "type": "float", "value": 0.9, "unit": "mm", "min": 0.2, "max": 5,
+      "doc": "Warn if grid bars are thinner (default = 2 perimeters at a 0.4 mm nozzle)."
+    },
+    "min_wall": {
+      "group": "checks", "type": "float", "value": 0.9, "unit": "mm", "min": 0.2, "max": 5,
+      "doc": "Warn if walls or rims are thinner."
+    },
+    "min_deck_thickness": {
+      "group": "checks", "type": "float", "value": 1.2, "unit": "mm", "min": 0.2, "max": 5,
+      "doc": "Warn if the shelf deck is thinner."
+    },
+    "arc_segments_per_90": {
+      "group": "checks", "type": "int", "value": 8, "unit": "", "min": 2, "max": 64,
+      "doc": "Arc tessellation for the pure-Python STL/3MF export (segments per 90 degrees)."
+    }
+  }
+}
