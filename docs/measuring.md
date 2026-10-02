@@ -62,9 +62,17 @@ the side walls while measuring; they flex.
 | `D_cubby` | From the front lip (the leading edge of the opening) to the rear wall, at roughly the height where the shelf will sit. Use the caliper's depth rod against the rear wall. |
 | `W_bottom` | Inner width just above the Qi pad (about 2 mm up), **10 mm behind the front lip**. |
 | `W_top` | Inner width just below the roof, also **10 mm behind the front lip**. `W_top` and `W_bottom` tell the model whether the side walls lean. If they are equal, the walls are vertical. |
-| `W_rear_delta` | Width **10 mm in front of the rear wall** minus width **10 mm behind the lip**, both at shelf height. Negative means the cubby narrows toward the rear. Molded parts usually have a slight draft, so expect -2 … 0. |
-| `R_rear_corner` | Radius of the rounded inner corner where a side wall meets the rear wall, seen from above. Press a piece of card into the corner and trace it, or compare with coins (a €1 coin has a 11.6 mm radius, a €0.10 coin 9.9 mm). Use 0 if the corner is sharp. |
+| `W_rear_delta` | Width **10 mm in front of the rear wall** minus width **10 mm behind the lip**, both at shelf height. Negative means the cubby narrows toward the rear. The tested Vela3D model narrows by about 9 mm over this distance, so expect a clearly negative value. |
+| `R_rear_corner` | Radius of the rounded inner corner where a side wall meets the rear wall, seen from above. Press a piece of card into the corner and trace it, or compare with coins (a €1 coin has a 11.6 mm radius, a €0.10 coin 9.9 mm). Use 0 if the corner is sharp. The Vela3D model rounds this corner over its last ~30 mm, which our single radius matches best at about 17 mm. |
 | `W_lip` | Narrowest width of the **opening** at the front lip, at shelf height. If the lip is narrower than the inside (an undercut), the shelf has to be tilted in, and the checks warn about it. |
+
+> **Known limitation (found by comparing with the Vela3D model).** The model interpolates the
+> width linearly between `W_bottom` (floor) and `W_top` (roof). The tested Vela3D housing shows that
+> the side walls are **curved**: they lean about 6° per side around shelf height and curve in much
+> more toward the floor. A floor width measured right above the pad would then make the shelf a few
+> mm too narrow at shelf height. Until the model takes widths measured around the shelf band, also
+> write down the **width at your planned shelf height** (10 mm behind the lip) and compare it with
+> the report's "shelf width at front edge, top" plus 2 × `side_gap`.
 
 ### Plugs and cables (rear wall)
 
@@ -107,6 +115,10 @@ The build report prints all of these numbers, so try a value and adjust it.
 3. Run `python tools/rav4shelf.py check`. Every tool (CLI, `rhino/build_all.py`, Grasshopper)
    applies `params/measured.json` automatically. The report lists any placeholder that is still in
    use, and any check that fails.
+4. If you have the Vela3D reference model in `reference/`, run `python tools/rav4shelf.py reference`.
+   It compares your outline with that tested design and draws `out/reference_compare.svg`. A
+   difference of more than about 5 mm per side usually means a wrong measurement, or that your car
+   has the other dash variant.
 
 Also take a few photos with a ruler in the frame. They help a lot when something doesn't fit.
 

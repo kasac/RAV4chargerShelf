@@ -4,6 +4,7 @@
   cut it out of card and hold it in the cubby before printing anything.
 * overview_svg     : plan, front and side views with the ports, the phone and
   the check results, to confirm the measurements were read the right way.
+* reference_overlay_svg : our outline drawn over a reference model's section.
 """
 from __future__ import annotations
 
@@ -255,3 +256,37 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
     width = fx0 + 2 * wmax + 60
     height = y + pad
     return s.render(width, height, physical=False)
+
+
+# --------------------------------------------------------------------------
+# reference overlay
+# --------------------------------------------------------------------------
+
+def reference_overlay_svg(ref_segments, our_ring, lines: List[str], title: str) -> str:
+    """Plan view in the reference frame (x, depth; front at the bottom): the
+    reference section in red, our outline in blue, plus text lines."""
+    xs = [x for seg in ref_segments for x, _ in seg] + [x for x, _ in our_ring]
+    ds = [dd for seg in ref_segments for _, dd in seg] + [dd for _, dd in our_ring]
+    x0, x1, d0, d1 = min(xs), max(xs), min(ds), max(ds)
+    pad, head = 10.0, 16.0
+
+    def fx(x):
+        return pad + (x - x0)
+
+    def fy(dd):
+        return head + (d1 - dd)  # rear wall at the top, front at the bottom
+
+    s = _Svg()
+    s.add(_text(pad, 7, title, 4.0, weight="bold"))
+    s.add(_text(pad, 12.5, "red: reference section   blue: our shelf outline (aligned at the rear edge)",
+                3.0, color=C_DIM))
+    s.add('<path d="%s" fill="none" stroke="%s" stroke-width="0.35"/>' % (
+        " ".join("M%.2f,%.2f L%.2f,%.2f" % (fx(a[0]), fy(a[1]), fx(b[0]), fy(b[1]))
+                 for a, b in ref_segments), C_WARN))
+    s.add('<polygon points="%s" fill="%s" fill-opacity="0.10" stroke="%s" stroke-width="0.35"/>'
+          % (_pts(our_ring, fx, fy), C_SHELF, C_SHELF))
+    y = head + (d1 - d0) + 9
+    for line in lines:
+        s.add(_text(pad, y, line, 3.0))
+        y += 4.6
+    return s.render(2 * pad + (x1 - x0), y + pad, physical=False)

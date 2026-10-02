@@ -61,15 +61,22 @@ def write_stl(path: str, vertices: Sequence[Vec3], faces: Sequence[Tuple[int, in
 
 
 def read_stl(path: str):
-    """Read a binary STL back as a list of triangles (for tests)."""
+    """Read a binary or ASCII STL as a list of triangles ((x,y,z), (x,y,z), (x,y,z))."""
     with open(path, "rb") as f:
         data = f.read()
-    (count,) = struct.unpack_from("<I", data, 80)
-    tris = []
-    for i in range(count):
-        vals = struct.unpack_from("<12f", data, 84 + i * 50)
-        tris.append((vals[3:6], vals[6:9], vals[9:12]))
-    return tris
+    if len(data) >= 84:
+        (count,) = struct.unpack_from("<I", data, 80)
+        if len(data) == 84 + 50 * count:  # binary (ASCII files never match exactly)
+            return [(v[3:6], v[6:9], v[9:12])
+                    for v in struct.iter_unpack("<12fH", data[84:84 + 50 * count])]
+    pts = []
+    for line in data.decode("ascii", "replace").splitlines():
+        parts = line.split()
+        if len(parts) == 4 and parts[0] == "vertex":
+            pts.append((float(parts[1]), float(parts[2]), float(parts[3])))
+    if not pts or len(pts) % 3:
+        raise ValueError("%s is not a readable STL file" % path)
+    return [tuple(pts[i:i + 3]) for i in range(0, len(pts), 3)]
 
 
 _CONTENT_TYPES = (

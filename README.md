@@ -96,7 +96,8 @@ src/rav4shelf/
   layout.py      shelf outline, coupon profile, reference boxes   pure Python, tested
   checks.py      sanity checks + build report                     pure Python, tested
   meshing.py     watertight coupon mesh without Rhino             pure Python, tested
-  fileio.py      STL / 3MF writers (used by the CLI and Rhino)    pure Python, tested
+  fileio.py      STL / 3MF writers and STL reader                 pure Python, tested
+  reference.py   compare / fit against a reference model (Vela3D) pure Python, tested
   preview_svg.py overview drawing + 1:1 paper template            pure Python, tested
   cli.py         python tools/rav4shelf.py ...
   geometry.py    RhinoCommon B-rep builders                       Rhino only, mocked tests
@@ -105,6 +106,7 @@ src/rav4shelf/
 rhino/build_all.py             standalone Rhino 8 entry point
 rhino/gh_components/*.py       thin wrappers pasted into GH Python 3 Script components
 grasshopper/                   save RAV4chargerShelf.gh here
+reference/                     paid reference models go here (git-ignored)
 docs/                          measuring guide, Grasshopper setup, parameter reference
 tests/                         pytest (CI: Python 3.9 = Rhino 8, and 3.12)
 tools/                         CLI launcher, docs generator
@@ -141,6 +143,49 @@ including the exact message.
 - [ ] The Export button writes STL / 3MF (and STEP) to `out/`.
 - [ ] **reload** picks up an edit to a `.py` file without restarting Rhino.
 
+## Reference comparison (Vela3D, a tested design)
+
+The Vela3D "Toyota RAV4 Tray Drawer Organizer" (Cults3D, paid) is a tested design for this cubby.
+Its STL files are **not** in the repo. Put `TOYOTA_RAV4_TRAY_DRAWER_ORGANIZER_MODULE.stl` into
+`reference/` ([reference/README.md](reference/README.md)) and run:
+
+```bash
+python tools/rav4shelf.py reference    # compare your outline, print fitted values, out/reference_compare.svg
+python -m pytest tests/test_reference.py
+```
+
+The comparison slices the reference housing in plan and measures its outer half-width every
+0.5 mm of depth, at two heights 8 mm apart. It does the same for our generated outline, aligned
+at the rear edge, and reports how far ours sticks out beyond it or falls short of it. On CI, the
+tests that need the paid file skip. The comparison code itself is tested there on meshes this
+project generates.
+
+**What the files are:**
+- **MODULE** is the drawer housing: 235 mm wide, 121 mm deep, 89 mm tall including its side wings,
+  printed standing and turned 45° on the bed.
+- **LEFT/RIGHT** are two mirrored drawers. They slide on the housing's floor plate, held by side
+  ribs.
+- The housing sits high in the cubby. Its curved side wings reach down along the walls, with foam
+  between wing and wall. The phone and the plugs stay free underneath.
+
+**Findings: my placeholders vs the tested outline**
+
+| | placeholder | tested design |
+|---|---|---|
+| width at shelf height (front) | 198 mm | ≈ 234 mm (ours **~20 mm smaller per side**) |
+| narrowing toward the rear | 0 | 8.4 mm per 100 mm of depth |
+| rear corner | R 5 | a long free-form curve; best single radius R 17 |
+| side-wall lean | 1.5° per side | ≈ 6° per side, curving in much more toward the floor |
+| depth (rear wall → front) | 121 mm | 121 mm (coincidence) |
+
+[`params/reference_vela3d.json`](params/reference_vela3d.json) holds parameters that make our
+generator reproduce the tested outline: **sides within 0.23 mm, rear corners within 1.4 mm**. The
+residual is a single circular fillet against their free-form corner. Two cautions about this file:
+- Its heights rest on stated assumptions, and `side_gap` is 0 because Vela3D's foam thickness is
+  unknown.
+- Use it *instead of* measurements (`-p params/reference_vela3d.json`), not together with them.
+  It's applied after `params/measured.json`, so it would override your numbers.
+
 ## Design notes and deviations from the brief
 
 - **Pure math vs Rhino:** outlines are computed once in pure Python (`layout.Outline`: polygon plus
@@ -170,3 +215,6 @@ including the exact message.
    side plates down to the floor beside the Qi pad (exact height, needs floor space). The coupon
    test shows which one fits the car.
 2. Shelf height versus drawer height: this depends on `H_ports_top` and `H_cubby`.
+3. **Width model.** The Vela3D comparison shows the side walls are curved, not straight from floor
+   to roof. The model should take two widths measured just above and below the shelf band, instead
+   of interpolating between the floor and the roof.

@@ -1,0 +1,20 @@
+{
+  "_source": "Fitted to the outer boundary of Vela3D Toyota RAV4 Tray Drawer Organizer, MODULE.stl (drawer housing) by 'python tools/rav4shelf.py reference --write-params'. The STL is not in the repo (paid); only these dimensions are derived from it.",
+  "_meaning": "With these values our shelf outline reproduces the tested Vela3D outline (side_gap 0: their foam gap is unknown, the real cubby is wider by 2 x foam). Use it BEFORE you have measured: -p params/reference_vela3d.json is applied after params/measured.json and would override your measurements.",
+  "_assumptions": "Not in the file, assumed: housing front 8 mm behind the lip, back 1 mm from the rear wall, wing tips on the floor, housing top at the roof at the back. W_top/W_bottom are a linear fit around the shelf band, not the real roof/floor widths (the real side walls curve in toward the floor).",
+  "_fit": "sides within 0.23 mm; rear corners within 1.40 mm (a single circular fillet vs their free-form corner); wall lean 6.2 deg per side; 8.4 mm narrower per 100 mm of depth",
+  "W_top": 236.48,
+  "W_bottom": 219.69,
+  "W_rear_delta": -9.28,
+  "D_cubby": 129.88,
+  "H_cubby": 77.86,
+  "W_lip": 236,
+  "shelf_height": 67.41,
+  "front_recess": 8.0,
+  "rear_gap": 1.0,
+  "side_gap": 0.0,
+  "frame_height": 8.0,
+  "corner_radius_front": 1.0,
+  "port_notch_width": 0.0,
+  "R_rear_corner": 17.0
+}
