@@ -16,10 +16,12 @@ OUT = os.path.join(REPO, "docs", "parameters.md")
 
 # phase in which a group is first used by geometry
 USED_BY = {
-    "cubby": "coupon, shelf", "ports": "checks, previews", "phone": "checks, previews",
-    "fit": "coupon, shelf", "strength": "shelf (coupon uses frame_height)",
+    "cubby": "the envelope: fit coupon, profile gauge, shelf (defaults fitted to the Vela3D "
+             "module, see README)", "ports": "checks, previews", "phone": "checks, previews",
+    "fit": "fit coupon, shelf", "strength": "shelf (fit coupon uses frame_height)",
     "perforation": "shelf, drawer (planned)", "drawer": "drawer (planned)",
-    "tolerances": "drawer, hinge (planned)", "coupon": "fit coupon", "checks": "checks, export",
+    "tolerances": "drawer, hinge (planned)", "coupon": "fit coupon, profile gauge",
+    "checks": "checks, export",
 }
 
 
@@ -40,9 +42,10 @@ def render() -> str:
         "",
         "Generated from `params/default.json` by `python tools/gen_param_docs.py`. Do not edit by hand.",
         "",
-        "**PH** = placeholder: a guess that must be measured or decided (the build report lists",
-        "every placeholder still in use). Range = slider range in Grasshopper; values outside",
-        "it are rejected. `auto` = derived from other parameters unless you set a value.",
+        "**PH** = not confirmed for your car yet (the build report lists them). **V** = the",
+        "default is fitted to the Vela3D module; confirm it with the test prints. Plain **PH** = a",
+        "guess to measure. Range = slider range in Grasshopper; values outside it are rejected.",
+        "`auto` = derived from other parameters unless you set a value.",
         "",
     ]
     groups = []
@@ -64,7 +67,8 @@ def render() -> str:
                 rng = "%s .. %s" % (_fmt(float(s["min"])), _fmt(float(s["max"])))
             lines.append("| `%s` | %s | %s | %s | %s | %s |" % (
                 name, _fmt(s["value"]), s.get("unit", ""), rng,
-                "PH" if s.get("placeholder") else "", s["doc"].replace("|", "/")))
+                ("PH V" if s.get("basis") == "vela3d" else "PH") if s.get("placeholder") else "",
+                s["doc"].replace("|", "/")))
         lines.append("")
     return "\n".join(lines)
 

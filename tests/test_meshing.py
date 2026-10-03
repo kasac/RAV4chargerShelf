@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from rav4shelf import fileio, layout, meshing
+from rav4shelf import fileio, layout, meshing, params
 
 from conftest import make
 
@@ -21,8 +21,11 @@ def test_coupon_mesh_dimensions_car_frame(p, d):
     assert z0 == pytest.approx(d.z_top - d.coupon_rim_height)
     assert y0 == pytest.approx(d.y_front)
     assert y1 == pytest.approx(d.y_rear)
-    # widest point = top of the band (walls lean outward by default)
-    assert x1 - x0 == pytest.approx(d.shelf_width_front_top, abs=0.05)
+    # widest point: top of the band (walls lean outward), just behind the rounded front
+    # corners (the cubby narrows toward the rear)
+    y = d.y_front + p.corner_radius_front
+    widest = params.cubby_width(p, y, d.z_top) - 2 * p.side_gap
+    assert x1 - x0 == pytest.approx(widest, abs=0.05)
 
 
 def test_coupon_volume_matches_profile_area(p, d):
@@ -51,10 +54,11 @@ def test_print_orientation(p, d):
 @pytest.mark.parametrize("over", [
     {},
     {"port_notch_width": 0.0},
-    {"W_top": 190.0, "W_bottom": 200.0},        # walls lean inward
-    {"W_rear_delta": -8.0, "R_rear_corner": 0.0},
+    {"wall_lean_deg": -3.0, "wall_radius": 0.0},  # walls lean inward
+    {"W_rear_delta": -12.0, "rear_corner_length": 0.0, "rear_corner_r_back": 0.0},
+    {"rear_corner_length": 40.0, "rear_corner_inset": 12.0, "rear_corner_r_side": 20.0},
     {"corner_radius_front": 0.0, "port_notch_radius": 0.0},
-    {"coupon_flange_width": 20.0, "coupon_rim_height": 12.0},
+    {"coupon_flange_width": 20.0, "coupon_rim_height": 30.0},
     {"X_ports": -40.0, "port_notch_width": 50.0},
 ])
 def test_coupon_variants_stay_watertight(over):
@@ -106,3 +110,29 @@ def test_weld_merges_duplicates():
     v2, f2 = fileio.weld(verts, faces)
     assert len(v2) == 3
     assert f2 == [(0, 1, 2), (0, 1, 2)]
+
+
+def test_profile_gauge_is_watertight_and_sized(p, d):
+    m = meshing.profile_gauge_mesh(p, d)
+    assert meshing.check_closed(m) == []
+    (x0, y0, z0), (x1, y1, z1) = m.bbox()
+    assert z1 - z0 == pytest.approx(p.gauge_thickness)
+    # widest just below the chamfered top corners
+    full = params.cubby_width(p, p.gauge_y, p.H_cubby)
+    below = params.cubby_width(p, p.gauge_y, p.H_cubby - p.gauge_corner) - 2 * p.gauge_clearance
+    assert below - 0.1 <= x1 - x0 <= full
+    height = params.roof_height(p, 0.0, p.gauge_y) - 2 * p.gauge_clearance
+    assert y1 - y0 == pytest.approx(height, abs=0.1)
+
+
+@pytest.mark.parametrize("over", [
+    {"gauge_band": 3.0, "gauge_corner": 0.0},
+    {"gauge_band": 10.0, "gauge_clearance": 0.0, "gauge_y": 60.0},
+    {"gauge_corner": 2.0},             # raised to the minimum automatically
+    {"roof_pocket_width": 0.0},
+    {"wall_radius": 0.0, "wall_lean_deg": -2.0},
+])
+def test_profile_gauge_variants(over):
+    from conftest import make
+    p, d = make(**over)
+    assert meshing.check_closed(meshing.profile_gauge_mesh(p, d)) == []

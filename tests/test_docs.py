@@ -18,13 +18,15 @@ def test_parameter_reference_is_up_to_date():
             "docs/parameters.md is stale: run python tools/gen_param_docs.py"
 
 
-def test_measured_example_lists_every_placeholder_and_nothing_unknown():
+def test_measured_example_lists_every_guess_and_nothing_unknown():
     spec = params.load_spec()
     with open(os.path.join(REPO, "params", "measured.example.json"), encoding="utf-8") as f:
         example = json.load(f)
     keys = {k for k in example if not k.startswith("_")}
     assert keys <= set(spec)
-    assert keys == {n for n, s in spec.items() if s.get("placeholder")}
+    guesses = {n for n, s in spec.items() if s.get("placeholder") and s.get("basis") != "vela3d"}
+    assert guesses <= keys
+    assert all(example[n] is None for n in guesses)
 
 
 def test_unfilled_example_gives_a_helpful_error():

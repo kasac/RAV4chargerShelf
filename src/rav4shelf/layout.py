@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import List, Tuple
 
 from .geom2d import GeometryError, Outline, Point
-from .params import Derived, Params, cubby_width
+from .params import Derived, Params, cubby_half_width, cubby_width, roof_height
 
 
 # --------------------------------------------------------------------------
@@ -24,14 +24,18 @@ from .params import Derived, Params, cubby_width
 def shelf_outline(p: Params, d: Derived, z: float, inset: float = 0.0) -> Outline:
     """Outline of the shelf in plan at height z, offset inward by ``inset``.
 
-    The side edges follow the side walls (taper with z and with depth) minus
-    side_gap. The front edge sits front_recess behind the lip, the rear edge
-    rear_gap in front of the rear wall, with the port notch cut into it.
+    The side edges follow the side walls (curved, tapering toward the rear)
+    minus side_gap. The front edge sits front_recess behind the lip, the rear
+    edge rear_gap in front of the rear wall, with the port notch cut into it.
+    Each rear corner is a chamfer from rear_corner_length in front of the rear
+    edge to rear_corner_inset in from the side, rounded with rear_corner_r_side
+    and rear_corner_r_back.
 
-    Vertex order (counter-clockwise from above), with the notch:
-        0 front-left, 1 front-right, 2 rear-right,
-        3 notch mouth right, 4 notch front-right, 5 notch front-left,
-        6 notch mouth left, 7 rear-left
+    Vertex order (counter-clockwise from above):
+        front-left, front-right,
+        right corner: chamfer start, chamfer end   (or one corner vertex)
+        notch: mouth right, front-right, front-left, mouth left   (if enabled)
+        left corner: chamfer end, chamfer start   (or one corner vertex)
     """
     yf, yr = d.y_front, d.y_rear
     if yr - yf < 10.0:
@@ -39,25 +43,38 @@ def shelf_outline(p: Params, d: Derived, z: float, inset: float = 0.0) -> Outlin
             "shelf depth is only %.1f mm: check D_cubby, front_recess, rear_gap" % (yr - yf))
 
     def hw(y):
-        return cubby_width(p, y, z) / 2.0 - p.side_gap
+        return cubby_half_width(p, y, z) - p.side_gap
 
-    rf = p.corner_radius_front
-    rr = p.R_rear_corner
-    rn = p.port_notch_radius
+    chamfer = p.rear_corner_length > 0 and p.rear_corner_inset > 0
+    yc = yr - p.rear_corner_length
+    if chamfer and yc <= yf + 5.0:
+        raise GeometryError("rear_corner_length (%.1f) reaches the front of the shelf"
+                            % p.rear_corner_length)
+    x_back = hw(yr) - (p.rear_corner_inset if chamfer else 0.0)  # where the rear edge ends
 
-    verts: List[Point] = [(-hw(yf), yf), (hw(yf), yf), (hw(yr), yr)]
-    radii = [rf, rf, rr]
+    rf, rn = p.corner_radius_front, p.port_notch_radius
+    r_side, r_back = p.rear_corner_r_side, p.rear_corner_r_back
+
+    verts: List[Point] = [(-hw(yf), yf), (hw(yf), yf)]
+    radii = [rf, rf]
     names = ["front edge", "right side"]
+    if chamfer:
+        verts += [(hw(yc), yc), (x_back, yr)]
+        radii += [r_side, r_back]
+        names += ["right rear corner"]
+    else:
+        verts.append((hw(yr), yr))
+        radii.append(r_back)
 
     if d.notch_enabled:
         nx = d.notch_center_x
         x_r = nx + p.port_notch_width / 2.0
         x_l = nx - p.port_notch_width / 2.0
         y_n = yr - p.port_notch_depth
-        if x_r >= hw(yr) or x_l <= -hw(yr):
+        if x_r >= x_back or x_l <= -x_back:
             raise GeometryError(
-                "port notch (x %.1f .. %.1f) reaches past the shelf side edges (+-%.1f): "
-                "reduce port_notch_width or move it" % (x_l, x_r, hw(yr)))
+                "port notch (x %.1f .. %.1f) reaches into the rear corners (rear edge +-%.1f): "
+                "reduce port_notch_width or move it" % (x_l, x_r, x_back))
         if y_n <= yf + 5.0:
             raise GeometryError(
                 "port notch (depth %.1f) reaches the front of the shelf: reduce port_notch_depth"
@@ -69,8 +86,13 @@ def shelf_outline(p: Params, d: Derived, z: float, inset: float = 0.0) -> Outlin
     else:
         names += ["rear edge"]
 
-    verts.append((-hw(yr), yr))
-    radii.append(rr)
+    if chamfer:
+        verts += [(-x_back, yr), (-hw(yc), yc)]
+        radii += [r_back, r_side]
+        names += ["left rear corner"]
+    else:
+        verts.append((-hw(yr), yr))
+        radii.append(r_back)
     names.append("left side")
 
     outline = Outline(verts, radii, names)
@@ -116,6 +138,51 @@ def coupon_profile(p: Params, d: Derived) -> List[Tuple[float, float]]:
         (w_fl, top - t),     # window edge, bottom
         (w_fl, top),         # window edge, top
     ]
+
+
+# --------------------------------------------------------------------------
+# profile gauge: the cubby cross-section seen from the front
+# --------------------------------------------------------------------------
+
+def profile_section(p: Params, y: float, step: float = 3.0, gap: float = 6.0,
+                    corner: float = None) -> Outline:
+    """Cubby cross-section at depth y, seen from the driver: x right, z up.
+
+    Floor at z = 0 (Qi pad level), curved side walls, roof with the pocket.
+    All four corners are chamfered by ``corner`` (default gauge_corner), so a
+    rounded transition in the car cannot hold the gauge off the walls.
+    Counter-clockwise, no fillets.
+    Curve samples keep ``gap`` from the corners, so the outline can be offset
+    inward by up to about gap without collapsing an edge there (the walls are
+    large arcs, so this costs no accuracy).
+    """
+    c = p.gauge_corner if corner is None else corner
+
+    def hw(z):
+        return cubby_half_width(p, y, z)
+
+    h_side = roof_height(p, hw(p.H_cubby), y)  # roof height at the side walls
+    right = [(hw(0.0) - c, 0.0)] if c > 0 else []
+    right.append((hw(c), c))
+    z = c + gap
+    while z < h_side - c - gap:
+        right.append((hw(z), z))
+        z += step
+    right.append((hw(h_side - c), h_side - c))
+    x_edge = hw(h_side) - c
+    if c > 0:
+        right.append((x_edge, h_side))
+    roof = []  # right to left, sampled only where the pocket lifts the roof
+    if p.roof_pocket_width > 0 and p.roof_pocket_rise > 0 and y < p.roof_pocket_end:
+        half = min(p.roof_pocket_width / 2.0 + p.roof_pocket_blend, x_edge - gap)
+        n = max(2, int(2 * half / step))
+        for i in range(n + 1):
+            x = half - 2.0 * half * i / n
+            roof.append((x, roof_height(p, x, y)))
+    left = [(-x, zz) for x, zz in reversed(right)]  # ends on the floor
+    pts = right + roof + left
+    pts = pts[-1:] + pts[:-1]  # start at the left floor point: first edge = floor
+    return Outline(pts, None, ["floor"] + ["profile %d" % i for i in range(1, len(pts))])
 
 
 # --------------------------------------------------------------------------

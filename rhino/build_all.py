@@ -46,7 +46,7 @@ from rav4shelf import checks, export, geometry, params  # noqa: E402
 
 # ---- settings -------------------------------------------------------------
 EXTRA_OVERRIDES = []  # e.g. [os.path.join(REPO, "params", "tight_fit.json")]
-PARTS = ["fit_coupon"]  # shelf, drawer, hinge_pin, tpu_bumpers: later phases
+PARTS = ["fit_coupon", "profile_gauge"]  # shelf, drawer, hinge_pin, tpu_bumpers: later
 FORMATS = ("step", "3mf", "stl")
 OUT_DIR = os.path.join(REPO, "out")
 # ---------------------------------------------------------------------------
@@ -73,19 +73,25 @@ def main():
     for name, geo in ctx.items():
         export.bake(doc, name, geo)
 
-    builders = {"fit_coupon": geometry.build_fit_coupon}
+    def coupon(p, d, tol):
+        brep, method = geometry.build_fit_coupon(p, d, tol)
+        return brep, brep, method
+
+    # each builder returns (part to export, part to bake in the car frame, method)
+    builders = {"fit_coupon": coupon, "profile_gauge": geometry.build_profile_gauge}
     for part in PARTS:
-        brep, method = builders[part](p, d, tol)
-        problems = geometry.check_solid(brep, part)
-        report.append("%s: built by %s, %.1f cm3" % (part, method, geometry.volume_cm3(brep)))
+        to_export, to_bake, method = builders[part](p, d, tol)
+        problems = geometry.check_solid(to_export, part)
+        report.append("%s: built by %s, %.1f cm3" % (part, method, geometry.volume_cm3(to_export)))
         report.extend("  PROBLEM: " + m for m in problems)
-        export.bake(doc, part, [brep])
-        paths, msgs = export.export_part(part, [brep], OUT_DIR, FORMATS, tol, doc)
+        export.bake(doc, part, [to_bake])
+        paths, msgs = export.export_part(part, [to_export], OUT_DIR, FORMATS, tol, doc)
         report.extend("  wrote " + x for x in paths)
         report.extend("  PROBLEM: " + m for m in msgs)
 
     if p.placeholders:
-        report.append("\nNOTE: built from PLACEHOLDER dimensions - measure first.")
+        report.append("\nNOTE: %d values are not confirmed for your car yet - check them with "
+                      "the test prints (docs/measuring.md)." % len(p.placeholders))
     text = "\n".join(report)
     print(text)
     if not os.path.isdir(OUT_DIR):

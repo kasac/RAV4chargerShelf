@@ -9,7 +9,7 @@ from typing import List
 
 from .geom2d import GeometryError, is_simple
 from .layout import coupon_profile, shelf_outline
-from .params import Derived, Params, cubby_width
+from .params import Derived, ParamError, Params, cubby_width, roof_height
 
 
 class Finding:
@@ -38,11 +38,25 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
         out.append(Finding(level, code, msg))
 
     # -- placeholders ---------------------------------------------------------
-    ph = p.placeholders
-    if ph:
+    fitted = p.reference_based
+    guesses = [n for n in p.placeholders if n not in fitted]
+    if fitted:
+        add("warning", "unconfirmed_reference",
+            "%d cubby values come from the fit to the Vela3D module and are not confirmed for "
+            "your car yet: %s. Print the fit coupon and the profile gauge (docs/measuring.md)."
+            % (len(fitted), ", ".join(fitted)))
+    if guesses:
         add("warning", "placeholders",
             "%d values are still PLACEHOLDER guesses, not measurements: %s. "
-            "Put your measurements in params/measured.json." % (len(ph), ", ".join(ph)))
+            "Put your measurements in params/measured.json." % (len(guesses), ", ".join(guesses)))
+
+    # -- the cubby model must be defined from the floor to the roof -------------
+    try:
+        for z in (0.0, p.H_cubby, roof_height(p, 0.0, 0.0)):
+            cubby_width(p, 0.0, z)
+    except ParamError as exc:
+        add("error", "wall_arc", "%s: the side walls must reach from the floor to the roof" % exc)
+        return out
 
     # -- vertical stack -------------------------------------------------------
     if d.z_top >= p.H_cubby:
@@ -80,8 +94,8 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
     if abs(d.side_draft_deg) > 0.05:
         lean = "outward" if d.side_draft_deg > 0 else "inward"
         add("info", "side_draft",
-            "side walls lean %s by %.2f deg per side going up (the shelf edge follows them)"
-            % (lean, abs(d.side_draft_deg)))
+            "over the shelf's edge band the side walls lean %s by %.2f deg per side going up "
+            "(the shelf edge follows them)" % (lean, abs(d.side_draft_deg)))
 
     # -- printability ----------------------------------------------------------
     for name, minimum in (("coupon_rim_width", p.min_wall), ("wall_thickness", p.min_wall),
@@ -109,7 +123,7 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
                 add("error", "coupon_self_intersects",
                     "fit coupon outline at inset %.1f mm intersects itself" % inset)
                 break
-    except GeometryError as exc:
+    except (GeometryError, ParamError) as exc:
         add("error", "geometry", str(exc))
 
     return out

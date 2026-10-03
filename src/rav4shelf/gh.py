@@ -106,8 +106,20 @@ def coupon_component(P, tol=geometry.DEFAULT_TOL):
                                                   geometry.volume_cm3(brep) * 1.27)]
     report += msgs or ["closed valid solid: OK"]
     if P.placeholders:
-        report.append("built from PLACEHOLDER dimensions (%d not measured)" % len(P.placeholders))
+        report.append("%d values not confirmed for your car yet" % len(P.placeholders))
     return brep, printed, outline, "\n".join(report)
+
+
+def profile_gauge_component(P, tol=geometry.DEFAULT_TOL):
+    """Profile gauge component -> (gauge standing in the car frame, gauge flat as printed, report)."""
+    d = params.derive(P)
+    flat, standing, method = geometry.build_profile_gauge(P, d, tol)
+    msgs = geometry.check_solid(flat, "profile_gauge")
+    report = ["profile_gauge (%.0f mm behind the lip) built by %s" % (P.gauge_y, method),
+              "volume %.1f cm3 (~%.0f g PETG)" % (geometry.volume_cm3(flat),
+                                                  geometry.volume_cm3(flat) * 1.27)]
+    report += msgs or ["closed valid solid: OK"]
+    return standing, flat, "\n".join(report)
 
 
 def context_component(P):

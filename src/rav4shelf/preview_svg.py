@@ -13,8 +13,8 @@ from typing import List, Sequence, Tuple
 from xml.sax.saxutils import escape
 
 from .checks import Finding
-from .layout import cubby_walls, phone_box, ports_box, shelf_outline
-from .params import Derived, Params, cubby_width
+from .layout import cubby_walls, phone_box, ports_box, profile_section, shelf_outline
+from .params import Derived, Params, cubby_width, roof_height
 
 C_WALL = "#333333"
 C_SHELF = "#2f6db5"
@@ -138,8 +138,8 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
     """Plan, front and side view plus the check results."""
     s = _Svg()
     pad = 14.0
-    wmax = max(p.W_top, p.W_bottom, cubby_width(p, p.D_cubby, p.H_cubby),
-               cubby_width(p, p.D_cubby, 0.0)) / 2.0 + 6.0
+    wmax = max(cubby_width(p, y, z) for y in (0.0, p.D_cubby) for z in (0.0, p.H_cubby)) / 2.0 + 6.0
+    htop = roof_height(p, 0.0, 0.0)  # highest point of the roof (pocket, at the lip)
 
     # ---- plan view (top left) ----
     ox, oy = pad, pad + 8
@@ -178,14 +178,13 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
         return fx0 + wmax + x
 
     def qz(z):
-        return top_front + p.H_cubby - z
+        return top_front + htop - z
 
     s.add(_text(fx0, oy - 4, "FRONT (looking into the cubby)", 3.6, weight="bold"))
-    wl0, wl1 = cubby_width(p, ym, 0.0) / 2.0, cubby_width(p, ym, p.H_cubby) / 2.0
-    s.add('<polyline points="%s" fill="none" stroke="%s" stroke-width="0.5"/>' % (
-        _pts([(-wl1, p.H_cubby), (-wl0, 0), (wl0, 0), (wl1, p.H_cubby)], qx, qz), C_WALL))
-    s.add('<line x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f" stroke="%s" stroke-width="0.5"/>'
-          % (qx(-wl1), qz(p.H_cubby), qx(wl1), qz(p.H_cubby), C_WALL))
+    wl0 = cubby_width(p, ym, 0.0) / 2.0
+    section = profile_section(p, ym, step=2.0, corner=0.0).ring()  # curved walls, roof pocket
+    s.add('<polygon points="%s" fill="none" stroke="%s" stroke-width="0.5"/>'
+          % (_pts(section, qx, qz), C_WALL))
     x0, x1, _, _, z0, z1 = phone_box(p)
     s.add('<polygon points="%s" fill="%s" fill-opacity="0.18" stroke="%s" stroke-width="0.3"/>'
           % (_pts(_rect_pts(x0, x1, z0, z1), qx, qz), C_PHONE, C_PHONE))
@@ -206,19 +205,21 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
                 color=C_PORTS))
 
     # ---- side view (below the front view): section through the plugs ----
-    sy0 = top_front + p.H_cubby + pad + 8
+    sy0 = top_front + htop + pad + 8
     side_ox = fx0
 
     def sx(y):
         return side_ox + y
 
     def sz(z):
-        return sy0 + p.H_cubby - z
+        return sy0 + htop - z
 
     s.add(_text(side_ox, sy0 - 4, "SIDE (section at the plugs, x %.1f; lip on the left)" % p.X_ports,
                 3.6, weight="bold"))
     s.add('<polyline points="%s" fill="none" stroke="%s" stroke-width="0.5"/>' % (
-        _pts([(0, 0), (p.D_cubby, 0), (p.D_cubby, p.H_cubby), (0, p.H_cubby)], sx, sz), C_WALL))
+        _pts([(0, 0), (p.D_cubby, 0)] + [(yy, roof_height(p, p.X_ports, yy)) for yy in
+                                         [p.D_cubby * (1 - i / 40.0) for i in range(41)]],
+             sx, sz), C_WALL))
     s.add(_text(sx(0), sz(0) + 4, "lip", 2.6, "middle", C_DIM))
     s.add(_text(sx(p.D_cubby), sz(0) + 4, "rear wall", 2.6, "middle", C_DIM))
     _, _, y0, y1, z0, z1 = phone_box(p)
@@ -236,7 +237,7 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
         _pts(_rect_pts(d.y_front, shelf_end, d.z_frame_bottom, d.z_top), sx, sz), C_SHELF, C_SHELF))
 
     # ---- text block ----
-    ty = max(oy + plan_h + pad, sy0 + p.H_cubby + pad)
+    ty = max(oy + plan_h + pad, sy0 + htop + pad)
     lines = [
         "shelf top z %.1f | underside z %.1f | free above %.1f | shelf %.1f x %.1f mm (w x d)"
         % (d.z_top, d.z_underside, d.space_above, d.shelf_width_front_top, d.shelf_depth),

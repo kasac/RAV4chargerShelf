@@ -1,23 +1,28 @@
-"""Compare the shelf outline with the outer boundary of a reference model, and
-fit our parameters to it. Pure Python (no Rhino, no numpy).
+"""Approximate a reference model's outer shape with our cubby envelope, and
+compare the two. Pure Python (no Rhino, no numpy).
 
 Reference: the Vela3D "Toyota RAV4 Tray Drawer Organizer" (Cults3D, a paid
-download, tested in the car). Its STL files are NOT part of this repository
-(licence). Put them in reference/, which is git-ignored. Only dimensions are
-derived from them, as the brief allows ("use them only for constraints").
+download, tested in the car; its outer surface looks like it follows a 3D
+scan of the cubby). Its STL files are NOT part of this repository (licence).
+Put them in reference/, which is git-ignored. Only a handful of numbers are
+derived from them: our envelope is a small parametric model (see
+params.cubby_half_width, params.roof_height, layout.shelf_outline), not a
+copy of their mesh.
 
 How MODULE.stl was read (from sections of the file, see README):
 * It is the drawer housing, printed standing and rotated 135 deg about z on
   the bed. Un-rotated, print x = car width, print z = car depth (max z is the
   front, where the drawers come out) and print y points DOWN in the car: the
   drawers slide on the plate at print y 29..36 (their side ribs run in grooves
-  parallel to it), the curved top plate is at print y 0..12 and the side wings
-  reach down to print y 89.
+  parallel to it), the top plate is at print y 0..12 and the side wings reach
+  down to print y 89.
 * Its outer sides press against the cubby walls through foam pads, so its
-  outline corresponds to our shelf outline with side_gap = foam thickness.
+  outline is the cubby minus their (unknown) foam allowance: envelope_offset.
 
 Frame used here: x centred on the part, depth measured from the part's front
-into the dash, level measured DOWN in the file's print coordinates.
+into the dash, level measured DOWN in the file's print coordinates. Car
+coordinates follow from the spec's assumptions: y = front_recess + depth,
+z = floor_level - level.
 """
 from __future__ import annotations
 
@@ -30,6 +35,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import fileio, layout
 from . import params as P
+from .geom2d import GeometryError
 from .params import Derived, Params
 
 REFERENCE_DIR = os.path.join(P.REPO_ROOT, "reference")
@@ -43,21 +49,27 @@ class ReferenceError(ValueError):
 
 
 class ReferenceSpec:
-    """How to place a reference STL in the (x, depth, level) frame.
+    """How to read a reference STL.
 
-    rotate_z_deg   rotation about z applied first (undoes the diagonal bed placement)
-    extents        expected bounding box after the rotation; None = do not check
-    x_axis         axis (0, 1, 2) that becomes x (car width)
-    depth_axis/sign  axis that becomes depth; sign -1 = the front is at the axis maximum
-    level_axis/sign  axis that becomes level; sign +1 = level grows with the axis
-    compare_level  level that corresponds to our shelf's TOP surface
-    floor_level    level of the Qi pad (ASSUMPTION, only used for fitted heights)
-    roof_level     level of the cubby roof above the shelf (ASSUMPTION, ditto)
-    rear_zone      the last rear_zone mm of depth are the rear corners, compared apart
+    rotate_z_deg       rotation about z applied first (undoes the diagonal bed placement)
+    extents            expected bounding box after the rotation; None = do not check
+    x_axis             axis (0, 1, 2) that becomes x (car width)
+    depth_axis/sign    axis that becomes depth; sign -1 = the front is at the axis maximum
+    level_axis/sign    axis that becomes level; sign +1 = level grows with the axis
+    floor_level        level of the Qi pad                          (ASSUMPTION)
+    front_recess       the part's front is this far behind the lip  (ASSUMPTION)
+    rear_gap           its back is this far in front of the rear wall (ASSUMPTION)
+    wall_levels        (min, max) levels where its sides follow the cubby walls
+    closed_back_levels (min, max) levels where it has a back face (rear corners)
+    rear_zone          the last rear_zone mm of depth are the rear corners
+    wing_end_margin    ignore this much before the side data ends (cut wing edges)
+    roof_depths        (min, max) depth range of its top surface to fit the roof to;
+                       None = it says nothing about the roof
     """
 
     def __init__(self, name, file_glob, rotate_z_deg, extents, x_axis, depth_axis, depth_sign,
-                 level_axis, level_sign, compare_level, floor_level, roof_level, rear_zone):
+                 level_axis, level_sign, floor_level, front_recess, rear_gap, wall_levels,
+                 closed_back_levels, rear_zone, wing_end_margin, roof_depths):
         self.name = name
         self.file_glob = file_glob
         self.rotate_z_deg = rotate_z_deg
@@ -67,10 +79,14 @@ class ReferenceSpec:
         self.depth_sign = depth_sign
         self.level_axis = level_axis
         self.level_sign = level_sign
-        self.compare_level = compare_level
         self.floor_level = floor_level
-        self.roof_level = roof_level
+        self.front_recess = front_recess
+        self.rear_gap = rear_gap
+        self.wall_levels = wall_levels
+        self.closed_back_levels = closed_back_levels
         self.rear_zone = rear_zone
+        self.wing_end_margin = wing_end_margin
+        self.roof_depths = roof_depths
 
 
 VELA3D_MODULE = ReferenceSpec(
@@ -79,12 +95,14 @@ VELA3D_MODULE = ReferenceSpec(
     rotate_z_deg=-135.0,
     extents=(235.20, 89.41, 120.88),
     x_axis=0, depth_axis=2, depth_sign=-1, level_axis=1, level_sign=1,
-    # 10.5 mm below the housing top at the back. Our 8 mm edge band then lies
-    # between print y 22 and 30, where the housing outline is closed at the back.
-    compare_level=22.0,
-    floor_level=89.41,  # ASSUMPTION: the wing tips touch the floor
-    roof_level=11.55,   # ASSUMPTION: the housing top touches the roof at the back
-    rear_zone=36.0,     # the sides are straight up to 85 mm behind the front
+    floor_level=89.41,         # ASSUMPTION: the wing tips reach the floor
+    front_recess=8.0,          # ASSUMPTION
+    rear_gap=1.0,              # ASSUMPTION
+    wall_levels=(16.0, 86.0),  # above 16 the housing's top edge is rounded
+    closed_back_levels=(16.0, 28.0),
+    rear_zone=36.0,            # the sides are straight up to 85 mm behind the front
+    wing_end_margin=15.0,
+    roof_depths=(4.0, 115.0),
 )
 
 
@@ -103,10 +121,10 @@ def frange(start: float, stop: float, step: float) -> List[float]:
 # sections and boundary profiles
 # --------------------------------------------------------------------------
 
-def extents_profile(segments: Sequence[Seg2], depths: Sequence[float]):
-    """For each depth (ascending): (x_min, x_max) of a plan section along the
-    line depth = const, or None where the section has no material."""
-    n = len(depths)
+def extents_profile(segments: Sequence[Seg2], probes: Sequence[float]):
+    """For each probe value v (ascending): (min, max) of the first coordinate
+    where the segments cross the line second-coordinate = v, or None."""
+    n = len(probes)
     lo = [math.inf] * n
     hi = [-math.inf] * n
     for (x0, d0), (x1, d1) in segments:
@@ -115,8 +133,8 @@ def extents_profile(segments: Sequence[Seg2], depths: Sequence[float]):
         if d0 > d1:
             x0, d0, x1, d1 = x1, d1, x0, d0
         k = (x1 - x0) / (d1 - d0)
-        for i in range(bisect.bisect_left(depths, d0), bisect.bisect_right(depths, d1)):
-            x = x0 + k * (depths[i] - d0)
+        for i in range(bisect.bisect_left(probes, d0), bisect.bisect_right(probes, d1)):
+            x = x0 + k * (probes[i] - d0)
             if x < lo[i]:
                 lo[i] = x
             if x > hi[i]:
@@ -162,30 +180,49 @@ class PlacedReference:
         self.height = ext[la]
         self._cache: Dict[tuple, list] = {}
 
-    def section(self, level: float) -> List[Seg2]:
-        """Plan section (x, depth) at a level."""
-        key = ("section", level)
+    def slice(self, axis: int, value: float) -> List[Seg2]:
+        """Section with the plane coordinate[axis] = value, as 2D segments in the
+        other two coordinates (in axis order): axis 2 (level) -> (x, depth),
+        axis 1 (depth) -> (x, level)."""
+        key = ("slice", axis, value)
         if key not in self._cache:
-            h = level + 1e-7  # never exactly through a vertex
+            h = value + 1e-7  # never exactly through a vertex
+            i0, i1 = [i for i in range(3) if i != axis]
             segs = []
             for t in self.triangles:
                 pts = []
-                for i in range(3):
-                    a, b = t[i], t[(i + 1) % 3]
-                    da, db = a[2] - h, b[2] - h
+                for k in range(3):
+                    a, b = t[k], t[(k + 1) % 3]
+                    da, db = a[axis] - h, b[axis] - h
                     if (da < 0) != (db < 0):
                         f = da / (da - db)
-                        pts.append((a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f))
+                        pts.append((a[i0] + (b[i0] - a[i0]) * f, a[i1] + (b[i1] - a[i1]) * f))
                 if len(pts) == 2:
                     segs.append((pts[0], pts[1]))
             self._cache[key] = segs
         return self._cache[key]
 
+    def section(self, level: float) -> List[Seg2]:
+        """Plan section (x, depth) at a level."""
+        return self.slice(2, level)
+
     def profile(self, level: float, depths: Sequence[float]):
+        """(x_min, x_max) of the plan section at each depth, or None."""
         key = ("profile", level, tuple(depths))
         if key not in self._cache:
             self._cache[key] = extents_profile(self.section(level), depths)
         return self._cache[key]
+
+    def top_levels(self, depth: float, xs: Sequence[float]):
+        """Level of the top surface (smallest level with material) at each x, or None."""
+        swapped = [((l0, x0), (l1, x1)) for (x0, l0), (x1, l1) in self.slice(1, depth)]
+        return [pr[0] if pr else None for pr in extents_profile(swapped, xs)]
+
+    def to_y(self, depth: float) -> float:
+        return self.spec.front_recess + depth
+
+    def to_z(self, level: float) -> float:
+        return self.spec.floor_level - level
 
 
 def load_reference(spec: ReferenceSpec = VELA3D_MODULE, path: str = None) -> PlacedReference:
@@ -196,13 +233,301 @@ def load_reference(spec: ReferenceSpec = VELA3D_MODULE, path: str = None) -> Pla
 
 
 # --------------------------------------------------------------------------
-# comparison
+# samples of the reference surface (car coordinates)
 # --------------------------------------------------------------------------
 
+def wall_samples(ref: PlacedReference, level_step: float = 2.0, depth_step: float = 2.0):
+    """(y, z, half-width) on the side walls, outside the rear corners and away
+    from the cut ends of the wings."""
+    spec = ref.spec
+    depths = frange(0.5, ref.depth - 0.5, depth_step)
+    rear_start = ref.depth - spec.rear_zone
+    out = []
+    for level in frange(spec.wall_levels[0], spec.wall_levels[1], level_step):
+        prof = ref.profile(level, depths)
+        have = [dd for dd, pr in zip(depths, prof) if pr]
+        if not have:
+            continue
+        last = min(rear_start, max(have) - spec.wing_end_margin)
+        for dd, pr in zip(depths, prof):
+            if pr and dd <= last:
+                out.append((ref.to_y(dd), ref.to_z(level), (pr[1] - pr[0]) / 2.0))
+    return out
+
+
+def roof_samples(ref: PlacedReference, x_step: float = 5.0, depth_step: float = 4.0,
+                 side_margin: float = 8.0):
+    """(x, y, z) on the top surface, away from the rounded side edges."""
+    spec = ref.spec
+    if not spec.roof_depths:
+        return []
+    out = []
+    for dd in frange(spec.roof_depths[0], spec.roof_depths[1], depth_step):
+        prof = ref.profile(spec.closed_back_levels[0], [dd])[0]  # side walls at that depth
+        if not prof:
+            continue
+        xs = frange(prof[0] + side_margin, prof[1] - side_margin, x_step)
+        for x, level in zip(xs, ref.top_levels(dd, xs)):
+            if level is not None:
+                out.append((x, ref.to_y(dd), ref.to_z(level)))
+    return out
+
+
+# --------------------------------------------------------------------------
+# a small optimiser (no numpy / scipy in Rhino)
+# --------------------------------------------------------------------------
+
+def nelder_mead(f, x0: Sequence[float], steps: Sequence[float], iters: int = 400,
+                tol: float = 1e-7):
+    """Minimise f over len(x0) variables. Returns (best x, best value)."""
+    n = len(x0)
+    pts = [list(x0)] + [[x0[j] + (steps[j] if j == i else 0.0) for j in range(n)]
+                        for i in range(n)]
+    vals = [f(p) for p in pts]
+    for _ in range(iters):
+        order = sorted(range(n + 1), key=lambda i: vals[i])
+        pts = [pts[i] for i in order]
+        vals = [vals[i] for i in order]
+        if abs(vals[-1] - vals[0]) < tol:
+            break
+        c = [sum(p[j] for p in pts[:-1]) / n for j in range(n)]
+        w = pts[-1]
+        r = [c[j] + (c[j] - w[j]) for j in range(n)]
+        fr = f(r)
+        if fr < vals[0]:
+            e = [c[j] + 2.0 * (c[j] - w[j]) for j in range(n)]
+            fe = f(e)
+            pts[-1], vals[-1] = (e, fe) if fe < fr else (r, fr)
+        elif fr < vals[-2]:
+            pts[-1], vals[-1] = r, fr
+        else:
+            k = [c[j] + 0.5 * (w[j] - c[j]) for j in range(n)]
+            fk = f(k)
+            if fk < vals[-1]:
+                pts[-1], vals[-1] = k, fk
+            else:
+                b = pts[0]
+                pts = [b] + [[b[j] + 0.5 * (p[j] - b[j]) for j in range(n)] for p in pts[1:]]
+                vals = [vals[0]] + [f(p) for p in pts[1:]]
+    i = min(range(n + 1), key=lambda i: vals[i])
+    return pts[i], vals[i]
+
+
+def _stats(devs: Sequence[float]) -> Optional[dict]:
+    if not devs:
+        return None
+    return {"max_out": max(devs), "max_in": min(devs), "max_abs": max(abs(v) for v in devs),
+            "rms": math.sqrt(sum(v * v for v in devs) / len(devs)), "n": len(devs)}
+
+
+# --------------------------------------------------------------------------
+# fitting the envelope parameters
+# --------------------------------------------------------------------------
+
+def fit_walls(samples, z_ref: float, d_cubby: float):
+    """Fit the side walls: half-width = a + b*y + wall(z), where wall(z) is a
+    circular arc seen from the front with lean ``lean`` at z_ref and curvature
+    k = 1/radius (k = 0: straight). The arc is moved linearly along the depth
+    (taper b). Fitting the curvature instead of the radius keeps straight walls
+    well-behaved. Returns (values, stats)."""
+    ys = [s[0] for s in samples]
+    zs = [s[1] for s in samples]
+    hs = [s[2] for s in samples]
+    n = float(len(samples))
+    my = sum(ys) / n
+    syy = sum((y - my) ** 2 for y in ys)
+    r_max = P.load_spec()["wall_radius"]["max"]
+
+    def wall(z, lean, k):
+        if k <= 1.0 / r_max:
+            return math.tan(lean) * (z - z_ref)
+        radius = 1.0 / k
+        dz = z - (z_ref + radius * math.sin(lean))
+        if abs(dz) >= radius:
+            return None
+        return math.sqrt(radius * radius - dz * dz) - radius * math.cos(lean)
+
+    def solve(lean, k):
+        g = [wall(z, lean, k) for z in zs]
+        if None in g:
+            return None
+        u = [h - gi for h, gi in zip(hs, g)]
+        mu = sum(u) / n
+        b = sum((y - my) * (ui - mu) for y, ui in zip(ys, u)) / syy
+        a = mu - b * my
+        res = [a + b * y - ui for y, ui in zip(ys, u)]  # model - data: + = ours bigger
+        return a, b, res
+
+    def rms(v):  # v = (lean in degrees, curvature in 1/m)
+        if v[1] < 0 or abs(v[0]) > 60:
+            return 1e9
+        sol = solve(math.radians(v[0]), v[1] / 1000.0)
+        return math.sqrt(sum(r * r for r in sol[2]) / n) if sol else 1e9
+
+    grid = [(lean, k) for lean in (-10.0, 0.0, 5.0, 10.0, 20.0) for k in (0.0, 1.0, 2.0, 4.0, 8.0)]
+    start = min(grid, key=rms)
+    (lean_deg, k_m), _ = nelder_mead(rms, start, (2.0, 0.5), iters=800, tol=1e-12)
+    k_m = max(k_m, 0.0)
+    a, b, res = solve(math.radians(lean_deg), k_m / 1000.0)
+    radius = 1000.0 / k_m if k_m > 1000.0 / r_max else 0.0
+    m = P.MEAS_INSET
+    values = {
+        # wall(z_ref) = 0, so the width at (y = MEAS_INSET, z_ref) is 2 (a + b m)
+        "W_ref": 2.0 * (a + b * m),
+        "z_ref": z_ref,
+        "wall_lean_deg": lean_deg,
+        "wall_radius": radius,
+        "W_rear_delta": 2.0 * b * (d_cubby - 2.0 * m),
+        "D_cubby": d_cubby,
+    }
+    return values, _stats(res)
+
+
+def fit_roof(samples):
+    """Fit H_cubby and the roof pocket to (x, y, z) samples of the top surface."""
+    if not samples:
+        return {}, None
+    zs = sorted(s[2] for s in samples)
+    names = ("H_cubby", "roof_pocket_width", "roof_pocket_blend", "roof_pocket_rise",
+             "roof_pocket_end", "roof_pocket_shape")
+
+    class Roof(object):
+        pass
+
+    def model(v):
+        r = Roof()
+        for k, val in zip(names, v):
+            setattr(r, k, val)
+        return r
+
+    def err(v):
+        if v[1] < 0 or v[2] < 0.5 or v[3] < 0 or v[4] < P.MEAS_INSET + 1 or not 0.5 <= v[5] <= 4:
+            return 1e9
+        r = model(v)
+        return math.sqrt(sum((P.roof_height(r, x, y) - z) ** 2 for x, y, z in samples)
+                         / len(samples))
+
+    best = None
+    for width in (80.0, 140.0, 200.0):
+        for shape in (1.0, 2.0):
+            v, e = nelder_mead(err, [zs[len(zs) // 10], width, 10.0, zs[-1] - zs[0], 100.0,
+                                     shape], (1.0, 15.0, 5.0, 2.0, 10.0, 0.3), iters=800)
+            if best is None or e < best[1]:
+                best = (v, e)
+    v = best[0]
+    res = [P.roof_height(model(v), x, y) - z for x, y, z in samples]
+    return dict(zip(names, v)), _stats(res)
+
+
+def corner_deviations(ref: PlacedReference, p: Params, step: float = 0.5,
+                      levels: Sequence[float] = None) -> List[float]:
+    """Deviation ours - reference of the half-width in the rear-corner zone, at
+    levels where the reference has a back face. Positive = ours is wider."""
+    spec = ref.spec
+    lo, hi = spec.closed_back_levels
+    levels = levels or [lo, (lo + hi) / 2.0, hi]
+    depths = frange(ref.depth - spec.rear_zone, ref.depth - 0.4, step)
+    d = P.derive(p)
+    shift = d.y_rear - ref.depth
+    out = []
+    for level in levels:
+        ring = layout.shelf_outline(p, d, ref.to_z(level)).ring(16)
+        ours = extents_profile(ring_segments(ring, shift), depths)
+        for o, r in zip(ours, ref.profile(level, depths)):
+            if o and r:
+                out.append((o[1] - o[0]) / 2.0 - (r[1] - r[0]) / 2.0)
+    return out
+
+
+def fit_rear_corner(ref: PlacedReference, base: Params):
+    """Fit the two-radius rear corner (chamfer + side and back fillets) by
+    minimising the worst deviation in the rear-corner zone."""
+    names = ("rear_corner_length", "rear_corner_inset", "rear_corner_r_side", "rear_corner_r_back")
+
+    def err(v):
+        if not (1.0 <= v[0] <= 2.0 * ref.spec.rear_zone and 0.2 <= v[1] <= 40.0
+                and 0.0 <= v[2] <= 300.0 and 0.0 <= v[3] <= 100.0):
+            return 1e3
+        try:
+            devs = corner_deviations(ref, base.with_overrides(dict(zip(names, v))))
+        except (GeometryError, P.ParamError):
+            return 1e3
+        return max(abs(x) for x in devs) if devs else 1e3
+
+    # the worst-case objective has local minima: several starts, then a restart
+    best = None
+    for start in ((25.0, 5.0, 60.0, 12.0), (35.0, 10.0, 30.0, 5.0), (20.0, 3.0, 100.0, 15.0),
+                  (30.0, 4.0, 60.0, 8.0), (15.0, 2.0, 40.0, 20.0), (45.0, 15.0, 80.0, 10.0)):
+        v, e = nelder_mead(err, start, (5.0, 2.0, 15.0, 3.0), iters=400, tol=1e-5)
+        if best is None or e < best[1]:
+            best = (v, e)
+    best = nelder_mead(err, best[0], (2.0, 1.0, 8.0, 2.0), iters=400, tol=1e-6)
+    values = dict(zip(names, best[0]))
+    return values, _stats(corner_deviations(ref, base.with_overrides(values)))
+
+
+ENVELOPE_KEYS = ("W_ref", "z_ref", "wall_lean_deg", "wall_radius", "W_rear_delta", "D_cubby",
+                 "H_cubby", "rear_corner_length", "rear_corner_inset", "rear_corner_r_side",
+                 "rear_corner_r_back", "roof_pocket_width", "roof_pocket_blend",
+                 "roof_pocket_rise", "roof_pocket_end", "roof_pocket_shape", "W_lip")
+
+# settings under which our envelope is compared with the reference part itself
+_ENVELOPE_ONLY = {"side_gap": 0.0, "envelope_offset": 0.0, "port_notch_width": 0.0,
+                  "corner_radius_front": 0.0}
+
+
+def fit_params(ref: PlacedReference, z_ref: float = None):
+    """All envelope parameters fitted to the reference. Returns (values, quality)."""
+    spec = ref.spec
+    z_ref = z_ref if z_ref is not None else P.load_spec()["z_ref"]["value"]
+    d_cubby = spec.front_recess + ref.depth + spec.rear_gap
+    values, wall_stats = fit_walls(wall_samples(ref), z_ref, d_cubby)
+    roof_values, roof_stats = fit_roof(roof_samples(ref))
+    values.update(roof_values)
+    if "H_cubby" not in values:
+        values["H_cubby"] = ref.to_z(0.0)
+    values["W_lip"] = float(math.ceil(ref.width + 0.5))
+    base = P.load_params(dict(_ENVELOPE_ONLY, front_recess=spec.front_recess,
+                              rear_gap=spec.rear_gap, **values))
+    corner_values, corner_stats = fit_rear_corner(ref, base)
+    values.update(corner_values)
+    values = {k: round(values[k], 2) for k in ENVELOPE_KEYS if k in values}
+    quality = {"walls": wall_stats, "rear_corners": corner_stats, "roof": roof_stats}
+    return values, quality
+
+
+# --------------------------------------------------------------------------
+# comparisons
+# --------------------------------------------------------------------------
+
+def envelope_report(p: Params, ref: PlacedReference) -> dict:
+    """How well the envelope in ``p`` matches the reference part's outer
+    surface: side walls at every level, rear corners where it has a back face,
+    roof. Deviations ours - reference (positive = our envelope is bigger)."""
+    spec = ref.spec
+    pe = p.with_overrides(dict(_ENVELOPE_ONLY, front_recess=spec.front_recess,
+                               rear_gap=spec.rear_gap))
+    walls = [P.cubby_half_width(pe, y, z) - hw for y, z, hw in wall_samples(ref)]
+    roof = [P.roof_height(pe, x, y) - z for x, y, z in roof_samples(ref)]
+    return {"walls": _stats(walls), "rear_corners": _stats(corner_deviations(ref, pe)),
+            "roof": _stats(roof)}
+
+
+def envelope_lines(report: dict) -> List[str]:
+    labels = {"walls": "side walls  ", "rear_corners": "rear corners", "roof": "roof        "}
+    out = []
+    for key in ("walls", "rear_corners", "roof"):
+        s = report.get(key)
+        if s:
+            out.append("%s rms %.2f mm, ours bigger by up to %.2f, smaller by up to %.2f "
+                       "(%d points)" % (labels[key], s["rms"], max(s["max_out"], 0.0),
+                                        max(-s["max_in"], 0.0), s["n"]))
+    return out
+
+
 class Comparison:
-    """Signed deviations ours - reference of the outer half-width.
-    Positive = our shelf sticks out beyond the reference (risk of touching the
-    car); negative = our shelf is smaller."""
+    """Signed deviations ours - reference of the outer half-width at our
+    shelf's edge band. Positive = our shelf sticks out beyond the reference."""
 
     def __init__(self, depth_ours: float, depth_ref: float, levels):
         self.rows = []  # (zone, level_name, depth, ours, ref, dev)
@@ -214,10 +539,10 @@ class Comparison:
         rows = [r for r in self.rows if r[0] == zone and (level_name is None or r[1] == level_name)]
         if not rows:
             return None
-        hi = max(rows, key=lambda r: r[5])
-        lo = min(rows, key=lambda r: r[5])
-        return {"max_out": hi[5], "max_out_at": hi[2], "max_in": lo[5], "max_in_at": lo[2],
-                "max_abs": max(abs(hi[5]), abs(lo[5])), "n": len(rows)}
+        s = _stats([r[5] for r in rows])
+        s["max_out_at"] = max(rows, key=lambda r: r[5])[2]
+        s["max_in_at"] = min(rows, key=lambda r: r[5])[2]
+        return s
 
     def summary_lines(self) -> List[str]:
         out = ["depth: ours %.1f mm, reference %.1f mm (aligned at the rear edge)"
@@ -226,8 +551,11 @@ class Comparison:
             for zone in ("sides", "rear corners"):
                 s = self.stats(zone, name)
                 if s is None:
+                    if zone == "rear corners":
+                        out.append("rear corners %-12s (z %5.1f): not comparable, the reference has "
+                                   "no back face at this height" % (name, z))
                     continue
-                out.append("%-12s %-12s (our z %5.1f): sticks out up to %+5.2f mm (depth %5.1f), "
+                out.append("%-12s %-12s (z %5.1f): sticks out up to %+5.2f mm (depth %5.1f), "
                            "smaller by up to %5.2f mm (depth %5.1f)" % (
                                zone, name, z, max(s["max_out"], 0.0), s["max_out_at"],
                                max(-s["max_in"], 0.0), s["max_in_at"]))
@@ -235,31 +563,31 @@ class Comparison:
 
 
 def compare(p: Params, d: Derived, ref: PlacedReference, step: float = 0.5) -> Comparison:
-    """Compare our shelf outline with the reference's outer boundary per side.
-
-    Our shelf top (z_top) is matched to spec.compare_level, the bottom of our
-    edge band (z_top - frame_height) to compare_level + frame_height. The two
-    are aligned at the rear edge (the rear wall is the common stop). The rear
-    corner zone is only compared at the top level.
-    """
+    """Compare our shelf outline (with side_gap etc.) at the top and bottom of
+    its edge band with the reference at the same heights, aligned at the rear
+    edge. Rear corners only where the reference has a back face."""
     spec = ref.spec
     shift = d.y_rear - ref.depth  # our y = reference depth + shift
-    d_lo = max(0.5, d.y_front - shift)
-    d_hi = ref.depth - 0.4  # skip the very edge of the back face
-    depths = frange(d_lo, d_hi, step)
-    levels = [("top", d.z_top, spec.compare_level),
-              ("band bottom", d.z_frame_bottom, spec.compare_level + p.frame_height)]
+    # start behind our own rounded front corners (they are a styling choice)
+    depths = frange(max(0.5, d.y_front - shift + p.corner_radius_front), ref.depth - 0.4, step)
+    levels = [("top", d.z_top, spec.floor_level - d.z_top),
+              ("band bottom", d.z_frame_bottom, spec.floor_level - d.z_frame_bottom)]
     cmp = Comparison(d.y_rear - d.y_front, ref.depth, levels)
     rear_start = ref.depth - spec.rear_zone
+    lo, hi = spec.closed_back_levels
     for name, z, level in levels:
-        ring = layout.shelf_outline(p, d, z).ring(32)
-        ours = extents_profile(ring_segments(ring, shift), depths)
+        ours = extents_profile(ring_segments(layout.shelf_outline(p, d, z).ring(32), shift), depths)
         theirs = ref.profile(level, depths)
+        have = [dd for dd, pr in zip(depths, theirs) if pr]
+        last = max(have) - spec.wing_end_margin if have else 0.0
         for dep, o, r in zip(depths, ours, theirs):
             if o is None or r is None:
                 continue
-            zone = "sides" if dep <= rear_start else "rear corners"
-            if zone == "rear corners" and name != "top":
+            if dep <= min(rear_start, last):
+                zone = "sides"
+            elif dep > rear_start and lo <= level <= hi:
+                zone = "rear corners"
+            else:
                 continue
             hw_o = (o[1] - o[0]) / 2.0
             hw_r = (r[1] - r[0]) / 2.0
@@ -267,104 +595,26 @@ def compare(p: Params, d: Derived, ref: PlacedReference, step: float = 0.5) -> C
     return cmp
 
 
-# --------------------------------------------------------------------------
-# fitting our parameters to the reference
-# --------------------------------------------------------------------------
-
-def _line_fit(pts: Sequence[Pt2]):
-    n = float(len(pts))
-    mx = sum(p[0] for p in pts) / n
-    my = sum(p[1] for p in pts) / n
-    sxx = sum((p[0] - mx) ** 2 for p in pts)
-    b = sum((p[0] - mx) * (p[1] - my) for p in pts) / sxx
-    a = my - b * mx
-    resid = max(abs(p[1] - (a + b * p[0])) for p in pts)
-    return a, b, resid
-
-
-def fit_params(ref: PlacedReference, front_recess: float = 8.0, rear_gap: float = 1.0,
-               frame_height: float = 8.0, corner_radius_front: float = 1.0):
-    """Parameters that make our generator reproduce the reference outline.
-
-    Returns (values, quality). side_gap is 0, so the outline equals the
-    reference part itself (the cubby is wider by Vela3D's foam, unknown).
-    Heights use the spec's floor/roof ASSUMPTIONS; W_top / W_bottom are a
-    linear fit around the shelf band, not the real roof / floor widths.
-    """
-    spec = ref.spec
-    depths = frange(5.0, ref.depth - spec.rear_zone, 1.0)
-
-    def side_line(level):
-        prof = ref.profile(level, depths)
-        return _line_fit([(dd, (pr[1] - pr[0]) / 2.0) for dd, pr in zip(depths, prof) if pr])
-
-    a_t, b_t, r_t = side_line(spec.compare_level)
-    a_b, b_b, r_b = side_line(spec.compare_level + frame_height)
-    b = (b_t + b_b) / 2.0
-    z_top = spec.floor_level - spec.compare_level
-    h_cubby = spec.floor_level - spec.roof_level
-    d_cubby = front_recess + ref.depth + rear_gap
-    y0 = P.MEAS_INSET
-    w_hi = 2.0 * (a_t + b * (y0 - front_recess))  # width at y0, at our shelf top
-    w_lo = 2.0 * (a_b + b * (y0 - front_recess))  # ... frame_height lower
-    k = (w_hi - w_lo) / frame_height              # width change per mm of height
-    w_bottom = w_hi - k * z_top
-    values = {
-        "W_top": w_bottom + k * h_cubby,
-        "W_bottom": w_bottom,
-        "W_rear_delta": 2.0 * b * (d_cubby - 2.0 * P.MEAS_INSET),
-        "D_cubby": d_cubby,
-        "H_cubby": h_cubby,
-        "W_lip": math.ceil(ref.width + 0.5),
-        "shelf_height": z_top,
-        "front_recess": front_recess,
-        "rear_gap": rear_gap,
-        "side_gap": 0.0,
-        "frame_height": frame_height,
-        "corner_radius_front": corner_radius_front,
-        "port_notch_width": 0.0,
-    }
-    values = {k_: round(v, 2) if isinstance(v, float) else v for k_, v in values.items()}
-
-    best = None
-    for radius in frange(1.0, 30.0, 0.5):
-        pp = P.load_params(dict(values, R_rear_corner=radius))
-        s = compare(pp, P.derive(pp), ref).stats("rear corners", "top")
-        if s and (best is None or s["max_abs"] < best[1]["max_abs"]):
-            best = (radius, s)
-    values["R_rear_corner"] = best[0]
-    pp = P.load_params(values)
-    final = compare(pp, P.derive(pp), ref)
-    quality = {
-        "side_line_residual": round(max(r_t, r_b), 3),
-        "sides": final.stats("sides"),
-        "rear_corners": final.stats("rear corners"),
-        "wall_lean_deg_per_side": round(math.degrees(math.atan(k / 2.0)), 2),
-        "width_change_per_100mm_depth": round(200.0 * b, 2),
-    }
-    return values, quality
-
-
 def write_params_file(path: str, values: dict, quality: dict, ref: PlacedReference) -> None:
-    sides, rear = quality["sides"], quality["rear_corners"]
+    spec = ref.spec
+    w, c, r = quality["walls"], quality["rear_corners"], quality["roof"]
     doc = {
-        "_source": ("Fitted to the outer boundary of %s by 'python tools/rav4shelf.py reference "
-                    "--write-params'. The STL is not in the repo (paid); only these dimensions "
-                    "are derived from it." % ref.spec.name),
-        "_meaning": ("With these values our shelf outline reproduces the tested Vela3D outline "
-                     "(side_gap 0: their foam gap is unknown, the real cubby is wider by 2 x foam). "
-                     "Use it BEFORE you have measured: -p params/reference_vela3d.json is applied "
-                     "after params/measured.json and would override your measurements."),
-        "_assumptions": ("Not in the file, assumed: housing front %.0f mm behind the lip, back "
-                         "%.0f mm from the rear wall, wing tips on the floor, housing top at the "
-                         "roof at the back. W_top/W_bottom are a linear fit around the shelf band, "
-                         "not the real roof/floor widths (the real side walls curve in toward the "
-                         "floor)." % (values["front_recess"], values["rear_gap"])),
-        "_fit": ("sides within %.2f mm; rear corners within %.2f mm (a single circular fillet "
-                 "vs their free-form corner); wall lean %.1f deg per side; %.1f mm narrower per "
-                 "100 mm of depth" % (sides["max_abs"], rear["max_abs"],
-                                      quality["wall_lean_deg_per_side"],
-                                      -quality["width_change_per_100mm_depth"])),
+        "_source": ("Fitted to the outer surface of %s by 'python tools/rav4shelf.py reference "
+                    "--write-params'. The STL is not in the repo (paid); only these numbers are "
+                    "derived from it. The same values are the defaults in params/default.json."
+                    % spec.name),
+        "_model": ("Side walls: one circular arc seen from the front (wall_radius, wall_lean_deg at "
+                   "z_ref) moved along the depth with a linear taper (W_rear_delta). Rear corners: "
+                   "chamfer + two fillets. Roof: flat at H_cubby with a pocket in the middle that "
+                   "rises toward the front."),
+        "_assumptions": ("Not in the file, assumed: its wing tips reach the Qi pad, its front is "
+                         "%.0f mm behind the lip, its back %.0f mm from the rear wall. The car's "
+                         "walls are outside this envelope by Vela3D's foam allowance (unknown): "
+                         "set envelope_offset from the fit coupon." % (spec.front_recess,
+                                                                       spec.rear_gap)),
+        "_fit": ("side walls rms %.2f / max %.2f mm (%d points), rear corners max %.2f mm, roof "
+                 "rms %.2f / max %.2f mm" % (w["rms"], w["max_abs"], w["n"], c["max_abs"],
+                                             r["rms"], r["max_abs"])),
     }
     doc.update(values)
     with open(path, "w", encoding="utf-8", newline="\n") as f:

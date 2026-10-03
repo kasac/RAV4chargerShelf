@@ -1,14 +1,8 @@
 {
-  "_how_to": "Copy this file to params/measured.json and replace every null with your measurement in mm (see docs/measuring.md). Delete a line to keep the default. Keys starting with _ are comments.",
+  "_how_to": "Copy this file to params/measured.json and replace every null in mm (see docs/measuring.md). Delete a line to keep the default. Keys starting with _ are comments.",
   "_date": "YYYY-MM-DD",
   "_car": "2024 RAV4 GR Sport PHEV (EU), 10.5in screen",
-  "W_top": null,
-  "W_bottom": null,
-  "W_rear_delta": null,
-  "D_cubby": null,
-  "H_cubby": null,
-  "R_rear_corner": null,
-  "W_lip": null,
+  "_measure_these": "Plugs, phone and the shelf height you want: the defaults are guesses.",
   "H_ports_top": null,
   "H_ports_bottom": null,
   "X_ports": null,
@@ -20,5 +14,6 @@
   "phone_width": null,
   "phone_thickness": null,
   "shelf_height": null,
-  "_after_the_fit_coupon": "tune side_gap here, e.g. \"side_gap\": 0.4"
+  "_after_the_test_prints": "The cubby shape defaults to the fit to the Vela3D module. Set envelope_offset to the gap you saw per side on the fit coupon; override other cubby values only if a test print showed they differ (docs/measuring.md, step 3).",
+  "envelope_offset": 0.0
 }

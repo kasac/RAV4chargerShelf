@@ -1,16 +1,16 @@
-# Measuring the cubby
+# Fitting the shelf to your car
 
-Every fit-critical number in `params/default.json` is a **placeholder guess**. This guide explains
-how to replace the guesses with measurements, and then how to check them with a paper template and
-the printed fit coupon before the real shelf is printed.
+The cubby shape doesn't need to be measured any more. Its defaults are **fitted to the Vela3D
+module**, a tested design whose outer surface appears to follow a 3D scan of the cubby (see
+README → Reference comparison). Two quick test prints check that shape in *your* car. You only
+need to measure the plugs, the phone and anything a test print shows to be different.
 
-Allow 30–45 minutes in the car.
+Allow about an hour of printing and 15 minutes in the car.
 
 ## What you need
 
-- A digital caliper (150 mm, with a depth rod) and a 300 mm steel ruler
-- A flashlight, painter's tape and a pen
-- Paper or card strips, and feeler gauges if you have them (80 g/m² paper is about 0.1 mm per sheet)
+- The two test prints (step 1)
+- A ruler, and paper strips or feeler gauges (80 g/m² paper is about 0.1 mm per sheet)
 - **The adapters, cables and phone you actually use.** A long 12 V USB adapter is the most common
   reason these shelves don't seat (see the D-Lumina review in the brief).
 
@@ -21,22 +21,22 @@ The same frame is used everywhere: parameters, the Rhino model, the previews.
 ```
 PLAN (looking down into the cubby)            FRONT (looking into the cubby from the driver seat)
 
-          rear wall  y = D_cubby                 z = H_cubby  ____________________   <- roof
-   +-------------[ plugs ]-------------+                     |<----- W_top ----->|
-   |               |X_ports|           |                     |                    |
-   |                                   |                      \                  /   side walls
--x |                 + x = 0           | +x                     \                /    may lean
-   |            (centreline)           |                       |<- W_bottom ->|
-   |                                   |          z = 0        |==== Qi pad ====|
-   +-----------------------------------+
+          rear wall  y = D_cubby                            _____/‾‾‾‾‾‾‾‾\_____   roof, H_cubby,
+   +-------------[ plugs ]-------------+                   /    roof pocket     \  higher in the
+   |               |X_ports|           |                  |<------ W_ref ------>|  middle (pocket)
+   |                                   |                  |    at z = z_ref     |
+-x |                 + x = 0           | +x                \                    /  side walls: an arc
+   |            (centreline)           |                    \                  /   (wall_radius) with
+   \                                   /  rear corners       \________________/    wall_lean_deg at z_ref
+    +---------------------------------+                         Qi pad, z = 0
           front lip  y = 0  (driver)
 
 SIDE (section through the plugs, lip on the left)
 
    y = 0 (lip)                             y = D_cubby (rear wall)
    |<------------------ D_cubby ------------------>|
-   +-----------------------------------------------+  z = H_cubby (roof)
-   |                                               |
+   \__ roof pocket rises toward the front          |
+   |      ‾‾‾‾‾‾‾‾‾\__________________________ ____|  z = H_cubby (flat roof)
    |          shelf top = shelf_height        [adapter]  <- H_ports_top  (highest point of plug + cable)
    |      ===========================        [ plugs ]
    |                                          [       ]  <- H_ports_bottom
@@ -46,136 +46,135 @@ SIDE (section through the plugs, lip on the left)
 
 - **x** runs to the right as seen from the driver, with 0 on the cubby centreline.
 - **y** runs from the front lip (y = 0) into the dash toward the rear wall.
-- **z** runs up from the Qi pad surface (z = 0). Measure from the pad's surface, not from its frame.
+- **z** runs up from the Qi pad surface (z = 0).
 
-## The measurements
+## The cubby envelope (fitted, about 15 numbers)
 
-Measure each value three times and write down the median. For widths, take the **smallest**
-reading at that spot: trim panels bulge, and the shelf has to fit the narrowest point. Don't push on
-the side walls while measuring; they flex.
+These values describe the cubby. They were fitted to the outer surface of the Vela3D module:
+side walls RMS 0.14 mm, rear corners within ±0.5 mm, roof RMS 0.09 mm.
 
-### Cubby
+| Parameter | What it describes |
+|---|---|
+| `W_ref`, `z_ref` | width 10 mm behind the lip, at height `z_ref` above the pad |
+| `wall_lean_deg` | how much each side wall leans at `z_ref` (wider going up) |
+| `wall_radius` | seen from the front, the side walls are an arc of this radius: they curve in toward the floor |
+| `W_rear_delta` | how much narrower the cubby is near the rear wall than near the lip |
+| `D_cubby` | lip to rear wall |
+| `H_cubby` | height of the flat part of the roof |
+| `rear_corner_length`, `rear_corner_inset`, `rear_corner_r_side`, `rear_corner_r_back` | rear corners seen from above: a chamfer from `rear_corner_length` in front of the rear wall to `rear_corner_inset` in from the side, rounded with the two radii |
+| `roof_pocket_width`, `roof_pocket_blend`, `roof_pocket_rise`, `roof_pocket_end`, `roof_pocket_shape` | the roof is higher over the middle 136 mm toward the front (by `roof_pocket_rise` near the lip, flattening out at `roof_pocket_end`) |
+| `W_lip` | opening width at the lip (only used to check that the shelf goes in) |
+
+Three things the file can't tell, so they're assumptions:
+- **Foam allowance.** Vela3D mounts its module with foam, so your walls are some unknown distance
+  outside this envelope. That distance is `envelope_offset`, and the fit coupon measures it.
+- **Floor height.** The floor is assumed to be where the module's side wings end. That's the
+  highest it can be (the module has to fit), so the profile gauge can only show a gap under it,
+  never jam.
+- **Fore-aft position.** The module's front is assumed to sit 8 mm behind the lip.
+
+## Step 1 – print the two test prints
+
+```bash
+python tools/rav4shelf.py coupon      # out/fit_coupon.* and out/profile_gauge.*
+```
+
+- **Fit coupon** (~20 g, 30–40 min): the shelf's exact outline and 8 mm edge band at shelf height,
+  on a thin plate with an open centre. Print it plate down.
+- **Profile gauge** (~11 g, ~20 min): a flat frame that has the cubby's cross-section seen from
+  the front, at `gauge_y` = 30 mm behind the lip, 0.3 mm smaller all round. It shows the curved
+  walls, the floor and the roof pocket at once. Print it flat.
+
+Use PETG for both, like the real shelf, so the shrinkage matches. With `side_gap` 0 and
+`envelope_offset` 0 (the defaults), the coupon is exactly the size of the Vela3D module at that
+height.
+
+Optional, before printing anything: `python tools/rav4shelf.py preview` writes a 1:1 paper template
+(`out/fit_template_1to1.svg`). Print it at 100 % and check that the 50 mm bar measures 50 mm.
+
+## Step 2 – try them in the car
+
+**Profile gauge.** Stand it upright in the cubby, about 30 mm behind the lip, with its long straight
+edge on the Qi pad and the raised middle of its top edge up.
+
+1. **Sides:** is the gap to the side walls even from top to bottom? This checks the wall lean and
+   curve.
+2. **Top:** does it reach the roof, and does the raised middle match the roof pocket?
+3. **Bottom:** is there a gap between its bottom edge and the Qi pad? Measure it.
+
+**Fit coupon.** Plate up, rim down, notch toward the rear wall, exactly as the shelf will sit. Hold
+it with its top at `shelf_height` (default 58 mm) above the Qi pad. A stack of books or a block cut
+to height helps.
+
+4. **Side gaps:** slide paper strips or feeler gauges between the rim and the wall at the front
+   and at the rear, on both sides. Note the four gaps.
+5. **Rear:** does it reach the rear wall? Do the rear corners touch before the sides do?
+6. **Plugs:** with your plugs inserted, is there air around them (in the notch, or under the
+   shelf)? Also look from the driver seat: can you still see the plugs?
+
+## Step 3 – what to change
+
+Put any changes in `params/measured.json`, then reprint the part that was off.
+
+| What you saw | Change |
+|---|---|
+| The same gap `g` per side on the coupon and the gauge | `envelope_offset` = `g`. Then choose `side_gap`: 0 for a snug fit, the pad thickness for felt or foam (like Vela3D), or slightly negative for a press fit. |
+| Gap bigger at the front than at the rear (or the other way round) | `W_rear_delta` |
+| Gauge: the gap changes from top to bottom along the side | `wall_lean_deg` (and `wall_radius` if it changes unevenly) |
+| Gauge: gap `h` under its bottom edge | the floor is lower than assumed: add `h` to `z_ref`, `H_cubby` and the `shelf_height` you want |
+| Gauge: sits on the pad but doesn't reach the roof (gap `t`) | add `t` to `H_cubby` (and to `roof_pocket_rise` if only the middle is off) |
+| Rear corners touch first | increase `rear_corner_inset` or `rear_corner_length` |
+| Coupon too long or too short front to back | `D_cubby` |
+| Plugs touch the coupon | raise `shelf_height`, or size the notch: `port_notch_width`, `port_notch_depth`, `port_notch_offset_x` |
+| It doesn't go through the opening flat | `W_lip` (the checks then warn) |
+
+If both prints fit, the cubby is described well enough and the shelf can be designed on top of it.
+
+## Step 4 – measure the plugs and the phone
+
+These are still guesses. They decide the shelf height and the port notch.
 
 | Parameter | How to measure |
 |---|---|
-| `H_cubby` | From the Qi pad surface straight up to the roof. If the roof slopes, use the **lowest** point above where the shelf will be. |
-| `D_cubby` | From the front lip (the leading edge of the opening) to the rear wall, at roughly the height where the shelf will sit. Use the caliper's depth rod against the rear wall. |
-| `W_bottom` | Inner width just above the Qi pad (about 2 mm up), **10 mm behind the front lip**. |
-| `W_top` | Inner width just below the roof, also **10 mm behind the front lip**. `W_top` and `W_bottom` tell the model whether the side walls lean. If they are equal, the walls are vertical. |
-| `W_rear_delta` | Width **10 mm in front of the rear wall** minus width **10 mm behind the lip**, both at shelf height. Negative means the cubby narrows toward the rear. The tested Vela3D model narrows by about 9 mm over this distance, so expect a clearly negative value. |
-| `R_rear_corner` | Radius of the rounded inner corner where a side wall meets the rear wall, seen from above. Press a piece of card into the corner and trace it, or compare with coins (a €1 coin has a 11.6 mm radius, a €0.10 coin 9.9 mm). Use 0 if the corner is sharp. The Vela3D model rounds this corner over its last ~30 mm, which our single radius matches best at about 17 mm. |
-| `W_lip` | Narrowest width of the **opening** at the front lip, at shelf height. If the lip is narrower than the inside (an undercut), the shelf has to be tilted in, and the checks warn about it. |
-
-> **Known limitation (found by comparing with the Vela3D model).** The model interpolates the
-> width linearly between `W_bottom` (floor) and `W_top` (roof). The tested Vela3D housing shows that
-> the side walls are **curved**: they lean about 6° per side around shelf height and curve in much
-> more toward the floor. A floor width measured right above the pad would then make the shelf a few
-> mm too narrow at shelf height. Until the model takes widths measured around the shelf band, also
-> write down the **width at your planned shelf height** (10 mm behind the lip) and compare it with
-> the report's "shelf width at front edge, top" plus 2 × `side_gap`.
-
-### Plugs and cables (rear wall)
-
-Plug in your **real** adapters and cables first, routed the way you normally route them.
-
-| Parameter | How to measure |
-|---|---|
-| `H_ports_top` | Highest point of any plug, adapter body or cable bend, above the Qi pad. This single number decides whether plugs can pass under the shelf. |
+| `H_ports_top` | Plug in your **real** adapters and cables, routed as you normally route them. Measure the highest point of any plug, adapter body or cable bend, above the Qi pad. This single number decides whether plugs can pass under the shelf. |
 | `H_ports_bottom` | Lowest point of the plug cluster above the Qi pad. Only used in the previews. |
 | `W_ports` | Lateral width of the whole cluster (plugs, adapters, cable bends). Measure from the left wall to the cluster's left edge (a) and to its right edge (b), at plug height: `W_ports = b - a`. |
 | `X_ports` | Lateral centre of the cluster relative to the cubby centreline, positive to the right. With a and b from above and the cubby width W at that height: `X_ports = (a + b) / 2 - W / 2`. |
 | `D_ports` | How far the plugs, adapters and cable bends stick out from the rear wall into the cubby. |
-
-### Phone and Qi spot
-
-| Parameter | How to measure |
-|---|---|
-| `qi_center_x` | Lateral position of the charging spot's centre (where the phone has to lie), from the centreline. Many pads have a marking. Otherwise use the spot where your phone charges reliably. |
-| `qi_center_y` | Distance from the front lip to that centre. |
+| `qi_center_x`, `qi_center_y` | Centre of the charging spot (where the phone has to lie): lateral position from the centreline, and distance from the lip. |
 | `phone_length`, `phone_width`, `phone_thickness` | Your phone **in its case**, including the camera bump. The model assumes the phone lies crosswise (long side along x). |
 
-### Decide the shelf height
+**Shelf height.** `shelf_height` is the height of the shelf's top surface above the Qi pad. The
+shelf's edge band reaches `frame_height` (8 mm) below it. The default, 58 mm, is about where the
+Vela3D drawers sit.
+- Plugs pass under the shelf if `shelf_height >= H_ports_top + port_clearance + frame_height`.
+- Otherwise they poke up through the rear notch. The checks tell you whether the notch clears them.
+- The phone needs `phone_clearance_min` (20 mm) under the lowest part of the shelf.
+- Whatever is left up to the roof (`H_cubby - shelf_height`, more under the roof pocket) is the
+  space for the drawer.
 
-`shelf_height` is the height of the shelf's **top surface** above the Qi pad. It is a decision, not a
-measurement, but it depends on the numbers above. The shelf's solid edge band reaches
-`frame_height` (default 8 mm) below its top surface.
+Write these into `params/measured.json` (start from `params/measured.example.json`) and run
+`python tools/rav4shelf.py check`. The report lists every value that is still unconfirmed.
 
-- **Plugs pass under the shelf** (simplest): `shelf_height >= H_ports_top + port_clearance + frame_height`.
-- **Plugs poke up through the rear notch**: the shelf can sit lower. Size `port_notch_width` and
-  `port_notch_depth` so the notch clears the cluster; the checks tell you by how much it falls short.
-- The phone needs `phone_clearance_min` (default 20 mm) under the lowest part of the shelf.
-- Whatever is left above the shelf (`H_cubby - shelf_height`) is the space for the drawer.
+## If you would rather measure the cubby yourself
 
-The build report prints all of these numbers, so try a value and adjust it.
+Measure `W_ref` 10 mm behind the lip at height `z_ref`. Measure a second width `W_low` 20 mm lower;
+then `wall_lean_deg = atan((W_ref - W_low) / 40)` in degrees. Keep the fitted `wall_radius`, which
+is hard to measure. For `W_rear_delta`, measure the width 10 mm in front of the rear wall at the
+same height and subtract `W_ref`. For the rear corners, press card into a corner and trace it.
+Measure each value three times and take the median. For widths, take the smallest reading: trim
+panels bulge, and they flex if you push.
 
-## Write the numbers down
+If you have the Vela3D model in `reference/`, `python tools/rav4shelf.py reference` compares your
+numbers with the tested design. A difference of more than about 5 mm per side usually means a
+wrong measurement, or that your car has the other dash variant.
 
-1. Copy `params/measured.example.json` to `params/measured.json`.
-2. Replace every `null` with your value in millimetres. Delete a line to keep the default.
-3. Run `python tools/rav4shelf.py check`. Every tool (CLI, `rhino/build_all.py`, Grasshopper)
-   applies `params/measured.json` automatically. The report lists any placeholder that is still in
-   use, and any check that fails.
-4. If you have the Vela3D reference model in `reference/`, run `python tools/rav4shelf.py reference`.
-   It compares your outline with that tested design and draws `out/reference_compare.svg`. A
-   difference of more than about 5 mm per side usually means a wrong measurement, or that your car
-   has the other dash variant.
+## Reporting back
 
-Also take a few photos with a ruler in the frame. They help a lot when something doesn't fit.
-
-## Step 0 – paper template (5 minutes, optional)
-
-`python tools/rav4shelf.py preview` writes `out/fit_template_1to1.svg`. Print it at **100 %**, with no
-"fit to page". Check that the 50 mm bar measures 50 mm, glue the print to card, cut along the solid
-blue line and try it in the cubby at shelf height. This catches gross errors (a wrong depth, a notch
-on the wrong side) before anything is printed.
-
-`out/overview.svg` shows plan, front and side views with the plugs and the phone. Use it to check
-that the measurements were read the way you meant them.
-
-## Step 1 – print and test the fit coupon
-
-The fit coupon is the shelf's outline and edge band only: a thin plate (6 layers) with the same rim
-the real shelf will have, and an open centre. It prints in about half an hour and tests everything
-that touches the car.
-
-- **Generate it** with `python tools/rav4shelf.py coupon`, which writes `out/fit_coupon.stl` and
-  `out/fit_coupon.3mf`. You can also use `rhino/build_all.py`, or the Grasshopper Export component.
-- **Print it** with the settings in the README's print table. Use PETG, like the real shelf, so the
-  shrinkage matches.
-
-### Test procedure
-
-1. **Orientation:** plate **up**, rim **down**, exactly as the shelf will sit, with the notch toward
-   the rear wall.
-2. **Insert** it through the lip opening. If it only goes in tilted, note that.
-3. **Height:** hold it with the plate top at `shelf_height` above the Qi pad. A stack of books or a
-   block cut to height helps. If the walls lean outward (`W_top > W_bottom`), it will wedge by itself
-   at some height. Note that height.
-4. **Side gaps:** at the front and at the rear, on both sides, slide paper strips or feeler gauges
-   between the rim and the wall. The gap should be about `side_gap` (default 0.5 mm, about 5 sheets).
-5. **Rim tilt:** does the rim touch the wall along its full height, or only at its top or bottom
-   edge? This tests the wall lean.
-6. **Rear corners:** does the rim hit the rounded rear corners before the sides touch?
-7. **Plugs:** with your plugs inserted, is there at least `port_clearance` of air around them in the
-   notch? Also look from the driver seat: can you still see the plugs?
-8. **Front edge:** is the edge where you want it (`front_recess` behind the lip)?
-
-### Adjust and reprint
-
-| Observation | Change |
-|---|---|
-| Gap too big or too small, the same everywhere | Re-measure `W_top` / `W_bottom`. If the measurement was right and you just want a snugger or looser fit, change `side_gap`. |
-| Gap differs between front and rear | `W_rear_delta` |
-| Rim touches only at its top or bottom edge | The ratio of `W_top` to `W_bottom` (the wall lean) |
-| Rear corners hit first | Increase `R_rear_corner` |
-| Plugs touch the notch | `port_notch_width`, `port_notch_depth`, `port_notch_offset_x` |
-| It wedges too low or too high | Width values, or plan on legs (see the shelf phase) |
-
-Repeat until the coupon drops in with the gaps you want. Then please report back with:
-
+Please send:
 - your `params/measured.json`
-- the gaps you measured (front/rear × left/right) and where it touched
-- photos of the coupon in the cubby, from the driver seat and from above
+- what you saw in step 2: the four coupon gaps, the gauge gaps (sides, top, bottom), and anything
+  that touched
+- photos of both prints in the cubby, from the driver seat and from above
 
-The shelf phase starts from those results. Whether the shelf stands on legs or wedges between the
-walls depends on what the coupon shows.
+The shelf phase starts from there.

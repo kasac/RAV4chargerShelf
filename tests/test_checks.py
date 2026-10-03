@@ -1,4 +1,6 @@
-from rav4shelf import checks
+import pytest
+
+from rav4shelf import checks, params
 
 from conftest import make
 
@@ -10,13 +12,24 @@ def codes(findings, level=None):
 def test_defaults_have_no_errors_but_flag_placeholders(p, d):
     f = checks.run_checks(p, d)
     assert not checks.has_errors(f)
-    assert "placeholders" in codes(f, "warning")
+    assert {"placeholders", "unconfirmed_reference"} <= codes(f, "warning")
+    msg = [x.message for x in f if x.code == "unconfirmed_reference"][0]
+    assert "W_ref" in msg and "H_ports_top" not in msg
 
 
-def test_measured_everything_clears_placeholder_warning(p):
+def test_measured_everything_clears_placeholder_warnings(p):
     all_ph = {n: p[n] for n in p.placeholders}
     p2, d2 = make(**all_ph)
-    assert "placeholders" not in codes(checks.run_checks(p2, d2))
+    found = codes(checks.run_checks(p2, d2))
+    assert "placeholders" not in found and "unconfirmed_reference" not in found
+
+
+def test_wall_arc_too_small_is_reported():
+    p, d = make(wall_radius=60.0, wall_lean_deg=30.0)  # valid at the shelf, not at the floor
+    found = checks.run_checks(p, d)
+    assert codes(found, "error") == {"wall_arc"}
+    with pytest.raises(params.ParamError):
+        make(wall_radius=5.0)  # not even valid at the shelf band
 
 
 def test_tall_adapter_without_notch_is_flagged():

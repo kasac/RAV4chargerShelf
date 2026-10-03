@@ -2,8 +2,8 @@
 
 Put purchased reference models here. Git ignores everything in this folder except this README.
 **Never commit them.** The Vela3D files are a paid Cults3D download, and their licence does not
-allow redistribution. Only dimensions derived from them (`params/reference_vela3d.json`) are in
-the repo, as the brief allows.
+allow redistribution. Only the ~15 numbers of the envelope fitted to them are in the repo
+(`params/reference_vela3d.json`, also the defaults in `params/default.json`), as the brief allows.
 
 Expected file:
 
@@ -15,7 +15,8 @@ Expected file:
 With the file in place:
 
 ```bash
-python tools/rav4shelf.py reference          # compare + out/reference_compare.svg
+python tools/rav4shelf.py reference          # compare + re-fit + out/reference_compare.svg
+python tools/rav4shelf.py reference --write-params params/reference_vela3d.json   # update the fit record
 python -m pytest tests/test_reference.py     # the same as unit tests
 ```
 

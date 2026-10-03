@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import Callable, Dict, List, Sequence, Tuple
 
-from .layout import coupon_profile, shelf_outline
+from .geom2d import GeometryError
+from .layout import coupon_profile, profile_section, shelf_outline
 from .params import Derived, Params
 
 Vec3 = Tuple[float, float, float]
@@ -111,6 +112,32 @@ def coupon_mesh(p: Params, d: Derived) -> Mesh:
         ring2d = shelf_outline(p, d, z, inset).ring(p.arc_segments_per_90)
         rings.append([(x, y, z) for x, y in ring2d])
     return sweep_rings(rings)
+
+
+def profile_gauge_mesh(p: Params, d: Derived) -> Mesh:
+    """Profile gauge, lying flat as printed: a frame gauge_band wide along the
+    cubby cross-section at depth gauge_y, gauge_clearance smaller all round."""
+    a = p.gauge_clearance
+    b = p.gauge_clearance + p.gauge_band
+    # a chamfer shorter than ~0.7 x the band would collapse when the frame's
+    # inner edge is offset from it, so small chamfers are raised to that
+    corner = max(p.gauge_corner, 0.7 * b) if p.gauge_corner > 0 else 0.0
+    section = profile_section(p, p.gauge_y, gap=max(6.0, 1.3 * b), corner=corner)
+    t = p.gauge_thickness
+    rings = []
+    for inset, z in ((a, 0.0), (a, t), (b, t), (b, 0.0)):
+        try:
+            ring2d = section.offset(inset).ring() if inset else section.ring()
+        except GeometryError:
+            raise GeometryError(
+                "profile gauge: gauge_band + gauge_clearance (%.1f mm) is wider than the "
+                "tightest curve of the cross-section (the edge of the roof pocket): reduce "
+                "gauge_band or gauge_clearance" % b)
+        rings.append([(x, y, z) for x, y in ring2d])
+    mesh = sweep_rings(rings)
+    (x0, y0, _), (x1, y1, _) = mesh.bbox()
+    cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+    return mesh.transformed(lambda v: (v[0] - cx, v[1] - cy, v[2]))
 
 
 def to_print_orientation(mesh: Mesh) -> Mesh:

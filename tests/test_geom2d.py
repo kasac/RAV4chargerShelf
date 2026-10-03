@@ -101,3 +101,10 @@ def test_is_simple_and_point_in_polygon():
     assert point_in_polygon((50, 10), NOTCHED)
     assert not point_in_polygon((50, 40), NOTCHED)  # inside the notch
     assert signed_area(NOTCHED) == pytest.approx(100 * 50 - 20 * 20)
+
+
+def test_offset_handles_collinear_vertices():
+    # a straight-through vertex at (50, 0) must not break the offset
+    o = Outline([(0, 0), (50, 0), (100, 0), (100, 50), (0, 50)]).offset(5)
+    assert o.verts[1] == pytest.approx((50, 5))
+    assert o.verts[0] == pytest.approx((5, 5))

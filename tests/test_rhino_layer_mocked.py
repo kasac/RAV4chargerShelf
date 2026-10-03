@@ -102,6 +102,25 @@ def test_build_fit_coupon_falls_back_to_joined_faces(fake):
     assert fake.rg.Brep.JoinBreps.call_count == 1
 
 
+def test_build_profile_gauge(fake):
+    from rav4shelf import geometry
+    _setup_booleans(fake.rg)
+    p = params.load_params()
+    flat, standing, method = geometry.build_profile_gauge(p, params.derive(p))
+    assert method == "boolean"
+    assert fake.rg.Brep.CreateFromLoft.call_count == 2  # outer plate + window cutter
+    assert fake.rg.Brep.CreateBooleanDifference.call_count == 1
+    fake.rg.Transform.Rotation.assert_called_once()     # stood up into the car frame
+
+
+def test_profile_gauge_component(fake):
+    from rav4shelf import gh
+    _setup_booleans(fake.rg)
+    fake.rg.VolumeMassProperties.Compute.return_value.Volume = 9000.0
+    standing, flat, report = gh.profile_gauge_component(params.load_params())
+    assert "profile_gauge" in report and "9.0 cm3" in report
+
+
 def test_check_solid_reports_problems(fake):
     from rav4shelf import geometry
     b = mock.MagicMock()
@@ -145,10 +164,10 @@ def test_params_component_reads_named_sliders(fake):
     from rav4shelf import gh
     fake.rhino.RhinoDoc.ActiveDoc.ModelUnitSystem = fake.rhino.UnitSystem.Millimeters
     extra = _gh_source("D_cubby", 133.0)  # an input named like a parameter
-    comp = _gh_component(fake, [_gh_source("W_top", 201.0), _gh_source("grid_style", "square"),
+    comp = _gh_component(fake, [_gh_source("W_ref", 231.0), _gh_source("grid_style", "square"),
                                 _gh_source("Slider", 5.0)], [extra])
     P, report = gh.params_component(comp)
-    assert P.W_top == 201.0
+    assert P.W_ref == 231.0
     assert P.grid_style == "square"
     assert P.D_cubby == 133.0
     assert "Ignored" in report and "Slider" in report
@@ -157,7 +176,7 @@ def test_params_component_reads_named_sliders(fake):
 
 def test_params_component_warns_about_item_access_and_units(fake):
     from rav4shelf import gh
-    comp = _gh_component(fake, [_gh_source("W_top", 201.0), _gh_source("W_bottom", 199.0)])
+    comp = _gh_component(fake, [_gh_source("W_ref", 231.0), _gh_source("wall_lean_deg", 6.0)])
     comp.Params.Input[0].Access = "item"
     P, report = gh.params_component(comp)
     assert "List Access" in report
@@ -166,11 +185,11 @@ def test_params_component_warns_about_item_access_and_units(fake):
 
 def test_slider_bank_schedules_all_missing(fake):
     from rav4shelf import gh
-    comp = _gh_component(fake, [_gh_source("W_top", 201.0)])
+    comp = _gh_component(fake, [_gh_source("W_ref", 231.0)])
     p = params.load_params()
     n = gh.schedule_slider_bank(comp, p, ["cubby"])
     cubby = [k for k, s in p.spec.items() if s["group"] == "cubby"]
-    assert n == len(cubby) - 1  # W_top is already wired
+    assert n == len(cubby) - 1  # W_ref is already wired
     # run the scheduled callback and check every object got wired
     delegate = fake.gh.Kernel.GH_Document.GH_ScheduleDelegate
     callback = delegate.call_args.args[0]

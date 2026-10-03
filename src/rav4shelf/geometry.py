@@ -153,6 +153,37 @@ def build_fit_coupon(p: Params, d: Derived, tol: float = DEFAULT_TOL):
         return brep, "joined faces (boolean failed: %s)" % exc
 
 
+def ring_curve(ring, z: float) -> rg.PolylineCurve:
+    """Closed polyline through 2D points at height z."""
+    pts = [rg.Point3d(x, y, z) for x, y in ring]
+    return rg.PolylineCurve(_net_list(rg.Point3d, pts + [pts[0]]))
+
+
+def build_profile_gauge(p: Params, d: Derived, tol: float = DEFAULT_TOL):
+    """Profile gauge: a flat frame with the cubby cross-section at gauge_y.
+
+    Returns (flat, standing, method): ``flat`` lies on the XY plane as printed
+    (x = car x, y = height above the pad), ``standing`` stands in the car frame
+    at y = gauge_y for the assembly view. Same shape as meshing.profile_gauge_mesh.
+    """
+    a = p.gauge_clearance
+    b = p.gauge_clearance + p.gauge_band
+    t = p.gauge_thickness
+    e = CUTTER_OVERSHOOT
+    corner = max(p.gauge_corner, 0.7 * b) if p.gauge_corner > 0 else 0.0
+    section = layout.profile_section(p, p.gauge_y, gap=max(6.0, 1.3 * b), corner=corner)
+    outer_ring = section.offset(a).ring() if a else section.ring()
+    inner_ring = section.offset(b).ring()
+    outer = loft_solid(ring_curve(outer_ring, 0.0), ring_curve(outer_ring, t), tol)
+    window = loft_solid(ring_curve(inner_ring, -e), ring_curve(inner_ring, t + e), tol)
+    flat = boolean_difference(outer, [window], tol)
+    standing = flat.DuplicateBrep()
+    # rotate +90 deg about x: (x, y, z) -> (x, -z, y), then centre the plate on gauge_y
+    standing.Transform(rg.Transform.Translation(0.0, p.gauge_y + t / 2.0, 0.0)
+                       * rg.Transform.Rotation(math.pi / 2.0, rg.Vector3d.XAxis, rg.Point3d.Origin))
+    return flat, standing, "boolean"
+
+
 def build_context(p: Params, d: Derived) -> dict:
     """Reference geometry in the car frame: cubby wireframe, plug cluster,
     phone on the Qi pad. For display only, never exported."""

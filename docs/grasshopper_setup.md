@@ -13,6 +13,7 @@ follow the same pattern.
 ```
 [sliders ...] ──► S ┐
 [Panel: groups] ──► │  PARAMS   P ──┬──► FIT COUPON  coupon ──► EXPORT (name="fit_coupon")
+                    │               ├──► PROFILE GAUGE  gauge_print ──► EXPORT (name="profile_gauge")
 [Button] ──► sliders│           report ─► Panel     coupon_print, outline, report ─► Panel
 [Button] ──► reload ┘               └──► CONTEXT   cubby, ports, phone ─► Custom Preview
 ```
@@ -78,7 +79,7 @@ slider, so pressing it again is safe.
 **Manual** (if the button fails):
 
 1. Place a **Number Slider** and set its range and default from [parameters.md](parameters.md).
-2. Rename it (double-click its name) to **exactly** the parameter name, e.g. `W_top`.
+2. Rename it (double-click its name) to **exactly** the parameter name, e.g. `W_ref`.
 3. Wire it into `S`. Hold **Shift** while dragging to add a wire without replacing the others.
 
 The same works for **Value List** (e.g. `grid_style`, items `"hex"`, `"square"`, …) and
@@ -96,7 +97,16 @@ Paste `rhino/gh_components/fit_coupon_component.py`.
 - Outputs: `coupon` (in the car frame, so it sits in the cubby), `coupon_print` (print orientation,
   plate down on the XY plane), `outline` (shelf outline curve at shelf height), `report`.
 
-Drag `W_top` or `side_gap` and the coupon updates live.
+Drag `envelope_offset`, `wall_lean_deg` or `side_gap` and the coupon updates live.
+
+## 5b. Profile gauge component
+
+Paste `rhino/gh_components/profile_gauge_component.py`.
+
+- Input: `P`. Outputs: `gauge` (standing upright in the car frame at `gauge_y`, so you see it in
+  the cubby), `gauge_print` (lying flat as printed), `report`.
+- To export it, wire `gauge_print` into a second Export component with name `profile_gauge`. The
+  export lays it flat anyway.
 
 ## 6. Context component (display only)
 
@@ -135,7 +145,7 @@ a component's inputs or outputs change; logic changes happen in `src/` and only 
 | `rav4shelf not found` | Save the `.gh` in `<repo>/grasshopper/` (step 1), or set `RAV4SHELF_REPO`. |
 | Params outputs a list of many `P` | Input `S` is not set to **List Access**. The report says so too. |
 | Edits to `.py` files have no effect | Press **reload** on the Params component, then recompute (F5). |
-| `unknown parameter 'W_topp'` | A typo in `measured.json` or the overrides file. The message suggests the right name. |
+| `unknown parameter 'W_reff'` | A typo in `measured.json` or the overrides file. The message suggests the right name. |
 | Report says document units are wrong | Run `Units` in Rhino and pick Millimeters. |
 | Coupon report says "joined faces (boolean failed …)" | The coupon is still valid. Please send the message after "boolean failed". |
 | Anything else | Copy the red error balloon text (right-click the component → *Runtime messages*) and report it. |

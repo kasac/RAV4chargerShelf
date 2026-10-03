@@ -63,6 +63,8 @@ def _check_spec(name: str, s: dict) -> None:
             raise ParamError("spec '%s' has min > max" % name)
     if t == "choice" and not s.get("choices"):
         raise ParamError("spec '%s' has no choices" % name)
+    if s.get("basis", "vela3d") != "vela3d":
+        raise ParamError("spec '%s' has unknown basis '%s'" % (name, s["basis"]))
     # the default itself must be valid
     _coerce(name, s, s["value"])
 
@@ -153,6 +155,11 @@ class Params:
         return dict(self._values)
 
     @property
+    def reference_based(self) -> List[str]:
+        """Placeholders whose default was fitted to the Vela3D reference model."""
+        return [n for n in self.placeholders if self._spec[n].get("basis") == "vela3d"]
+
+    @property
     def placeholders(self) -> List[str]:
         """Names flagged as placeholder in default.json that nobody overrode."""
         return [n for n, s in self._spec.items()
@@ -223,18 +230,61 @@ def load_params(*overrides, spec_path: str = None) -> Params:
 # cubby model and derived values
 # --------------------------------------------------------------------------
 
-def cubby_width(p: Params, y: float, z: float) -> float:
-    """Inner cubby width at depth y (from the lip) and height z (above the pad).
+def wall_offset(p: Params, z: float) -> float:
+    """Sideways position of each side wall at height z, relative to z_ref
+    (per side, + = outward).
 
-    Linear model: W_bottom -> W_top over the height, plus W_rear_delta over the
-    depth between the two measuring stations (MEAS_INSET from each end).
+    Seen from the front the wall is a circular arc of radius wall_radius with
+    lean wall_lean_deg at z_ref: it curves in toward the floor. wall_radius 0
+    gives a straight wall.
     """
-    w = p.W_bottom + (p.W_top - p.W_bottom) * z / p.H_cubby
+    lean = math.radians(p.wall_lean_deg)
+    radius = p.wall_radius
+    if radius <= 0:
+        return math.tan(lean) * (z - p.z_ref)
+    dz = z - (p.z_ref + radius * math.sin(lean))  # height above the arc centre
+    if abs(dz) >= radius:
+        raise ParamError("height %.1f is outside the side-wall arc (wall_radius %.1f too small)"
+                         % (z, radius))
+    return math.sqrt(radius * radius - dz * dz) - radius * math.cos(lean)
+
+
+def cubby_half_width(p: Params, y: float, z: float) -> float:
+    """Half the inner cubby width at depth y (from the lip) and height z (above the pad).
+
+    W_ref at z_ref, the curved side walls (wall_offset), a linear taper of
+    W_rear_delta between the two measuring stations (MEAS_INSET from the lip
+    and from the rear wall), plus envelope_offset.
+    """
+    hw = p.W_ref / 2.0 + wall_offset(p, z) + p.envelope_offset
     y0 = MEAS_INSET
     y1 = p.D_cubby - MEAS_INSET
     if y1 - y0 > 1e-6:
-        w += p.W_rear_delta * (y - y0) / (y1 - y0)
-    return w
+        hw += p.W_rear_delta / 2.0 * (y - y0) / (y1 - y0)
+    return hw
+
+
+def cubby_width(p: Params, y: float, z: float) -> float:
+    """Inner cubby width at depth y and height z."""
+    return 2.0 * cubby_half_width(p, y, z)
+
+
+def roof_height(p: Params, x: float, y: float) -> float:
+    """Height of the cubby roof above the pad at (x, y): flat at H_cubby, plus
+    the pocket in the middle that rises toward the front."""
+    if p.roof_pocket_width <= 0 or p.roof_pocket_rise <= 0 or y >= p.roof_pocket_end:
+        return p.H_cubby
+    along = ((p.roof_pocket_end - y) / (p.roof_pocket_end - MEAS_INSET)) ** p.roof_pocket_shape
+    half = p.roof_pocket_width / 2.0
+    ax = abs(x)
+    if ax <= half:
+        across = 1.0
+    elif p.roof_pocket_blend > 0 and ax < half + p.roof_pocket_blend:
+        t = (ax - half) / p.roof_pocket_blend
+        across = 1.0 - t * t * (3.0 - 2.0 * t)  # smoothstep
+    else:
+        across = 0.0
+    return p.H_cubby + p.roof_pocket_rise * along * across
 
 
 class Derived:
@@ -266,7 +316,8 @@ def derive(p: Params) -> Derived:
     y_front = p.front_recess
     y_rear = p.D_cubby - p.rear_gap
 
-    side_slope = (p.W_top - p.W_bottom) / (2.0 * p.H_cubby)  # dx/dz per side
+    # mean wall lean over the shelf's edge band (dx/dz per side)
+    side_slope = (wall_offset(p, z_top) - wall_offset(p, z_frame_bottom)) / max(p.frame_height, 1e-6)
 
     def shelf_w(y, z):
         return cubby_width(p, y, z) - 2.0 * p.side_gap

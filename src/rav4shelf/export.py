@@ -25,6 +25,7 @@ ROOT_LAYER = "RAV4chargerShelf"
 
 LAYER_COLORS = {
     "fit_coupon": (47, 109, 181),
+    "profile_gauge": (39, 174, 96),
     "shelf": (47, 109, 181),
     "drawer": (230, 126, 34),
     "cubby": (120, 120, 120),

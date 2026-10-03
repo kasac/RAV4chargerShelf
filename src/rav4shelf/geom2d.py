@@ -260,7 +260,10 @@ class Outline:
         for i in range(n):
             p0, d0 = lines[i - 1]
             p1, d1 = lines[i]
-            new_verts.append(line_intersection(p0, d0, p1, d1))
+            if abs(cross(d0, d1)) < 1e-9 and dot(d0, d1) > 0:
+                new_verts.append(p1)  # straight through: the offset lines coincide
+            else:
+                new_verts.append(line_intersection(p0, d0, p1, d1))
         for i in range(n):
             new_d = sub(new_verts[(i + 1) % n], new_verts[i])
             if dot(new_d, self.edge_dir(i)) <= 1e-6:
@@ -273,7 +276,36 @@ class Outline:
                 continue
             r2 = r - dist if self.is_convex(i) else r + dist
             new_radii.append(max(r2, MIN_FILLET))
-        return Outline(new_verts, new_radii, self.names)
+        out = Outline(new_verts, new_radii, self.names)
+        out._shrink_fillets_to_fit()
+        return out
+
+    def _shrink_fillets_to_fit(self):
+        """After an offset an edge can get too short for the fillets at its two
+        ends (e.g. a short chamfer between a large and a small fillet). Shrink
+        those fillets just enough to fit. Only offsets do this; the base
+        outline stays strict, so wrong parameters are still reported."""
+        n = len(self.verts)
+        factor = []
+        for i in range(n):
+            u = normalize(sub(self.verts[i - 1], self.verts[i]))
+            w = normalize(sub(self.verts[(i + 1) % n], self.verts[i]))
+            theta = math.acos(max(-1.0, min(1.0, dot(u, w))))
+            factor.append(0.0 if theta > math.pi - 1e-6 else 1.0 / math.tan(theta / 2.0))
+        for _ in range(8):
+            changed = False
+            for i in range(n):
+                j = (i + 1) % n
+                need = self.radii[i] * factor[i] + self.radii[j] * factor[j]
+                have = self.edge_length(i) * 0.999
+                if need > have and need > 0:
+                    k = have / need
+                    for v in (i, j):
+                        if self.radii[v] > 0:
+                            self.radii[v] = max(self.radii[v] * k, min(MIN_FILLET, self.radii[v]))
+                    changed = True
+            if not changed:
+                return
 
     # -- fillets ----------------------------------------------------------
 

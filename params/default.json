@@ -5,46 +5,96 @@
     "Do NOT put your measurements here. Put them in params/measured.json as a flat",
     "{\"name\": value} object (see params/measured.example.json). That file is picked",
     "up automatically by the CLI, rhino/build_all.py and the Grasshopper Params component.",
-    "\"placeholder\": true marks a GUESS that must be measured or decided before it can be",
-    "trusted. The build report lists every placeholder that is still in use.",
+    "\"placeholder\": true marks a value that is not confirmed for YOUR car yet. With",
+    "\"basis\": \"vela3d\" it was fitted to the tested Vela3D model (confirm it with the",
+    "fit coupon and profile gauge); without it, it is a guess. The build report lists both.",
     "Coordinates: x = right (seen from the driver), y = from the front lip into the dash,",
     "z = up from the Qi pad surface. See docs/measuring.md."
   ],
   "params": {
-    "W_top": {
-      "group": "cubby", "type": "float", "value": 200.0, "unit": "mm", "min": 80, "max": 350,
-      "placeholder": true,
-      "doc": "Cubby inner width just below the roof, measured 10 mm behind the front lip."
+    "W_ref": {
+      "group": "cubby", "type": "float", "value": 231.55, "unit": "mm", "min": 80, "max": 350,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Cubby width 10 mm behind the front lip, at height z_ref. Default: fitted to the outer surface of the Vela3D module (their foam allowance not included, see envelope_offset)."
     },
-    "W_bottom": {
-      "group": "cubby", "type": "float", "value": 196.0, "unit": "mm", "min": 80, "max": 350,
-      "placeholder": true,
-      "doc": "Cubby inner width just above the Qi pad surface, measured 10 mm behind the front lip."
+    "z_ref": {
+      "group": "cubby", "type": "float", "value": 55.0, "unit": "mm", "min": 0, "max": 200,
+      "doc": "Height above the Qi pad at which W_ref and wall_lean_deg are given. If you measure, measure there."
+    },
+    "wall_lean_deg": {
+      "group": "cubby", "type": "float", "value": 6.84, "unit": "deg", "min": -30, "max": 30,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Lean of each side wall at z_ref, seen from the front. Positive = the cubby gets wider going up."
+    },
+    "wall_radius": {
+      "group": "cubby", "type": "float", "value": 504.98, "unit": "mm", "min": 0, "max": 5000,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Radius of the side walls seen from the front: they curve in toward the floor. 0 = straight walls."
     },
     "W_rear_delta": {
-      "group": "cubby", "type": "float", "value": 0.0, "unit": "mm", "min": -40, "max": 40,
-      "placeholder": true,
-      "doc": "Width 10 mm in front of the rear wall minus width 10 mm behind the lip, both at shelf height. Negative = cubby narrows toward the rear."
+      "group": "cubby", "type": "float", "value": -9.44, "unit": "mm", "min": -40, "max": 40,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Width 10 mm in front of the rear wall minus width 10 mm behind the lip, at the same height. Negative = the cubby narrows toward the rear."
     },
     "D_cubby": {
-      "group": "cubby", "type": "float", "value": 130.0, "unit": "mm", "min": 40, "max": 300,
-      "placeholder": true,
-      "doc": "Depth from the front lip to the rear wall, at shelf height."
+      "group": "cubby", "type": "float", "value": 129.88, "unit": "mm", "min": 40, "max": 300,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Depth from the front lip to the rear wall, above the plugs. Default: Vela3D housing depth + front_recess + rear_gap (its position behind the lip is assumed)."
     },
     "H_cubby": {
-      "group": "cubby", "type": "float", "value": 75.0, "unit": "mm", "min": 20, "max": 200,
-      "placeholder": true,
-      "doc": "Height from the Qi pad surface to the roof (lowest point of the roof above the shelf area)."
+      "group": "cubby", "type": "float", "value": 77.85, "unit": "mm", "min": 20, "max": 200,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Height of the flat part of the roof above the Qi pad. Default: Vela3D housing top, assuming its wing tips reach the floor."
     },
-    "R_rear_corner": {
-      "group": "cubby", "type": "float", "value": 5.0, "unit": "mm", "min": 0, "max": 30,
-      "placeholder": true,
-      "doc": "Inner radius where the side walls meet the rear wall, seen from above (0 = sharp corner)."
+    "rear_corner_length": {
+      "group": "cubby", "type": "float", "value": 22.3, "unit": "mm", "min": 0, "max": 100,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Rear corners seen from above: a chamfer that starts this far in front of the rear wall on the side wall ... (0 = plain corner rounded with rear_corner_r_back)."
+    },
+    "rear_corner_inset": {
+      "group": "cubby", "type": "float", "value": 4.84, "unit": "mm", "min": 0, "max": 50,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "... and ends this far in from the side wall on the rear wall."
+    },
+    "rear_corner_r_side": {
+      "group": "cubby", "type": "float", "value": 67.33, "unit": "mm", "min": 0, "max": 300,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Fillet radius where the rear-corner chamfer meets the side wall."
+    },
+    "rear_corner_r_back": {
+      "group": "cubby", "type": "float", "value": 12.57, "unit": "mm", "min": 0, "max": 100,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Fillet radius where the rear-corner chamfer meets the rear wall."
+    },
+    "roof_pocket_width": {
+      "group": "cubby", "type": "float", "value": 135.86, "unit": "mm", "min": 0, "max": 350,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "The roof is higher in the middle toward the front (a pocket under the climate panel): width of its full-height part. 0 = flat roof."
+    },
+    "roof_pocket_blend": {
+      "group": "cubby", "type": "float", "value": 9.82, "unit": "mm", "min": 0, "max": 100,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Width of the smooth transition on each side of the roof pocket."
+    },
+    "roof_pocket_rise": {
+      "group": "cubby", "type": "float", "value": 11.62, "unit": "mm", "min": 0, "max": 100,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "How much higher than H_cubby the roof pocket is, 10 mm behind the lip."
+    },
+    "roof_pocket_end": {
+      "group": "cubby", "type": "float", "value": 107.68, "unit": "mm", "min": 10, "max": 300,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Distance from the lip where the roof pocket has flattened out to H_cubby."
+    },
+    "roof_pocket_shape": {
+      "group": "cubby", "type": "float", "value": 1.47, "unit": "", "min": 0.5, "max": 4,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Shape of the pocket rise along the depth: 1 = straight ramp, 2 = parabola."
     },
     "W_lip": {
-      "group": "cubby", "type": "float", "value": 200.0, "unit": "mm", "min": 60, "max": 350,
-      "placeholder": true,
-      "doc": "Narrowest width of the opening at the front lip, at shelf height. Only used to check that the shelf can be inserted flat."
+      "group": "cubby", "type": "float", "value": 236.0, "unit": "mm", "min": 60, "max": 350,
+      "placeholder": true, "basis": "vela3d",
+      "doc": "Narrowest width of the opening at the front lip, at shelf height. Only used to check that the shelf can be inserted flat. Default: the Vela3D module (235.2 wide) goes in."
     },
 
     "H_ports_top": {
@@ -100,9 +150,9 @@
     },
 
     "shelf_height": {
-      "group": "fit", "type": "float", "value": 52.0, "unit": "mm", "min": 5, "max": 190,
+      "group": "fit", "type": "float", "value": 58.0, "unit": "mm", "min": 5, "max": 190,
       "placeholder": true,
-      "doc": "Height of the shelf's TOP surface above the Qi pad. Decide after measuring H_ports_top and H_cubby."
+      "doc": "Height of the shelf's TOP surface above the Qi pad. Default: about where the Vela3D drawers sit (their floor is at 55 front .. 60 rear). Must clear your plugs (H_ports_top)."
     },
     "front_recess": {
       "group": "fit", "type": "float", "value": 8.0, "unit": "mm", "min": 0, "max": 60,
@@ -113,8 +163,12 @@
       "doc": "Gap between the shelf's rear edge and the rear wall."
     },
     "side_gap": {
-      "group": "fit", "type": "float", "value": 0.5, "unit": "mm", "min": -1, "max": 5,
-      "doc": "Gap per side between shelf edge and side wall. Tune with the fit coupon. Negative = interference (press fit). Use the pad thickness if you add felt/foam."
+      "group": "fit", "type": "float", "value": 0.0, "unit": "mm", "min": -3, "max": 5,
+      "doc": "Gap per side between the shelf edge and the side wall (see envelope_offset). 0 = exactly the size of the Vela3D module at that height. Negative = bigger (press fit). Use the pad thickness if you add felt/foam."
+    },
+    "envelope_offset": {
+      "group": "fit", "type": "float", "value": 0.0, "unit": "mm", "min": -5, "max": 10,
+      "doc": "How far your car's side walls are outside the fitted envelope (Vela3D's foam allowance or scan tolerance, unknown). Read it off the fit coupon: the gap you see per side when side_gap is 0."
     },
     "corner_radius_front": {
       "group": "fit", "type": "float", "value": 4.0, "unit": "mm", "min": 0, "max": 30,
@@ -154,7 +208,7 @@
       "doc": "Thickness of the perforated deck."
     },
     "frame_width": {
-      "group": "strength", "type": "float", "value": 8.0, "unit": "mm", "min": 3, "max": 30,
+      "group": "strength", "type": "float", "value": 8.0, "unit": "mm", "min": 3, "max": 20,
       "doc": "Width of the solid rim around the grid, seen from above."
     },
     "frame_height": {
@@ -247,7 +301,7 @@
       "doc": "Fit coupon: thickness of the flat outline plate (a few layers)."
     },
     "coupon_flange_width": {
-      "group": "coupon", "type": "float", "value": 8.0, "unit": "mm", "min": 2, "max": 40,
+      "group": "coupon", "type": "float", "value": 8.0, "unit": "mm", "min": 2, "max": 20,
       "doc": "Fit coupon: width of the plate ring, measured inward from the outline. The centre is open."
     },
     "coupon_rim_width": {
@@ -257,6 +311,26 @@
     "coupon_rim_height": {
       "group": "coupon", "type": "float", "value": null, "auto": true, "unit": "mm", "min": 1, "max": 40,
       "doc": "Fit coupon: rim height incl. the plate. null = frame_height, so the coupon has the same edge band as the real shelf."
+    },
+    "gauge_y": {
+      "group": "coupon", "type": "float", "value": 30.0, "unit": "mm", "min": 5, "max": 250,
+      "doc": "Profile gauge: depth behind the lip of the cross-section it reproduces (it stands vertically in the cubby there)."
+    },
+    "gauge_band": {
+      "group": "coupon", "type": "float", "value": 8.0, "unit": "mm", "min": 3, "max": 10,
+      "doc": "Profile gauge: width of the frame along the outline. The middle is open. At most 10 mm: wider bands no longer follow the curved edge of the roof pocket."
+    },
+    "gauge_thickness": {
+      "group": "coupon", "type": "float", "value": 2.0, "unit": "mm", "min": 0.8, "max": 6,
+      "doc": "Profile gauge: plate thickness."
+    },
+    "gauge_clearance": {
+      "group": "coupon", "type": "float", "value": 0.3, "unit": "mm", "min": 0, "max": 3,
+      "doc": "Profile gauge: gap to the cubby on every side, on top of envelope_offset."
+    },
+    "gauge_corner": {
+      "group": "coupon", "type": "float", "value": 6.0, "unit": "mm", "min": 0, "max": 30,
+      "doc": "Profile gauge: chamfer at its four corners, so a rounded transition in the car cannot hold it off the walls. 0 = sharp; otherwise at least 0.7 x (gauge_band + gauge_clearance), smaller values are raised to that."
     },
 
     "min_bar_width": {
