@@ -6,9 +6,10 @@
     "{\"name\": value} object (see params/measured.example.json). That file is picked",
     "up automatically by the CLI, rhino/build_all.py and the Grasshopper Params component.",
     "\"placeholder\": true marks a value that is not confirmed for YOUR car yet. With",
-    "\"basis\": \"reference\" it was estimated from the cubby-constraint-reference-model",
-    "(a stand-in for a 3D scan of the cavity; confirm it with the fit coupon and profile",
-    "gauge); without it, it is a guess. The build report lists both.",
+    "\"basis\": \"reference\" it is a starting value estimated from the",
+    "cubby-constraint-reference-model, made for a slightly different RAV4 version",
+    "(confirm it with the fit coupon and profile gauge); without it, it is a guess.",
+    "The build report lists both.",
     "Coordinates: x = right (seen from the driver), y = from the front lip into the dash,",
     "z = up from the Qi pad surface. See docs/measuring.md."
   ],
@@ -67,30 +68,44 @@
       "placeholder": true, "basis": "reference",
       "doc": "Fillet radius where the rear-corner chamfer meets the rear wall."
     },
+    "roof_pocket_rise": {
+      "group": "cubby", "type": "float", "value": 0.0, "unit": "mm", "min": 0, "max": 100,
+      "doc": "Some RAV4 versions have a raised pocket in the middle of the roof toward the front (an arch-shaped recess at the cabin-facing edge): how much higher than H_cubby it is, 10 mm behind the lip. 0 = no pocket: on the GR Sport PHEV the front edge of the roof is straight."
+    },
     "roof_pocket_width": {
       "group": "cubby", "type": "float", "value": 135.86, "unit": "mm", "min": 0, "max": 350,
-      "placeholder": true, "basis": "reference",
-      "doc": "The roof is higher in the middle toward the front (a pocket under the climate panel): width of its full-height part. 0 = flat roof."
+      "doc": "Roof pocket (only used if roof_pocket_rise > 0): width of its full-height part."
     },
     "roof_pocket_blend": {
       "group": "cubby", "type": "float", "value": 9.82, "unit": "mm", "min": 0, "max": 100,
-      "placeholder": true, "basis": "reference",
-      "doc": "Width of the smooth transition on each side of the roof pocket."
-    },
-    "roof_pocket_rise": {
-      "group": "cubby", "type": "float", "value": 11.62, "unit": "mm", "min": 0, "max": 100,
-      "placeholder": true, "basis": "reference",
-      "doc": "How much higher than H_cubby the roof pocket is, 10 mm behind the lip."
+      "doc": "Roof pocket (only used if roof_pocket_rise > 0): width of the smooth transition on each side."
     },
     "roof_pocket_end": {
       "group": "cubby", "type": "float", "value": 107.68, "unit": "mm", "min": 10, "max": 300,
-      "placeholder": true, "basis": "reference",
-      "doc": "Distance from the lip where the roof pocket has flattened out to H_cubby."
+      "doc": "Roof pocket (only used if roof_pocket_rise > 0): distance from the lip where it has flattened out to H_cubby."
     },
     "roof_pocket_shape": {
       "group": "cubby", "type": "float", "value": 1.47, "unit": "", "min": 0.5, "max": 4,
-      "placeholder": true, "basis": "reference",
-      "doc": "Shape of the pocket rise along the depth: 1 = straight ramp, 2 = parabola."
+      "doc": "Roof pocket (only used if roof_pocket_rise > 0): shape of the rise along the depth, 1 = straight ramp, 2 = parabola."
+    },
+    "led_x": {
+      "group": "cubby", "type": "float", "value": 0.0, "unit": "mm", "min": -100, "max": 100,
+      "doc": "Lateral position of the LED in the roof (it lights the Qi pad and the plugs), from the cubby centreline. It sits in the middle."
+    },
+    "led_y": {
+      "group": "cubby", "type": "float", "value": 65.0, "unit": "mm", "min": 0, "max": 300,
+      "placeholder": true,
+      "doc": "Distance from the front lip to the centre of the roof LED. Guess: the middle of the cubby."
+    },
+    "roof_bulge_depth": {
+      "group": "cubby", "type": "float", "value": 3.0, "unit": "mm", "min": 0, "max": 30,
+      "placeholder": true,
+      "doc": "The roof bulges down slightly in the middle, with the LED at its centre: how far its lowest point is below H_cubby. 0 = flat roof. Guess."
+    },
+    "roof_bulge_diameter": {
+      "group": "cubby", "type": "float", "value": 60.0, "unit": "mm", "min": 0, "max": 250,
+      "placeholder": true,
+      "doc": "Diameter of the roof bulge, modelled as a smooth round bump centred on the LED. Guess."
     },
     "W_lip": {
       "group": "cubby", "type": "float", "value": 236.0, "unit": "mm", "min": 60, "max": 350,
@@ -198,6 +213,10 @@
     "phone_clearance_min": {
       "group": "fit", "type": "float", "value": 20.0, "unit": "mm", "min": 5, "max": 100,
       "doc": "Minimum free height under the lowest part of the shelf, for the phone on the Qi pad plus room to slide it in and out."
+    },
+    "led_keepout_diameter": {
+      "group": "fit", "type": "float", "value": 50.0, "unit": "mm", "min": 0, "max": 150,
+      "doc": "Free zone around the roof LED (the LED itself is about 15 mm): no part may be built inside this circle, from the roof down to the Qi pad, so the LED stays uncovered and still lights the charger and plugs. 0 = no free zone."
     },
 
     "wall_thickness": {

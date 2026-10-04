@@ -13,7 +13,8 @@ from typing import List, Sequence, Tuple
 from xml.sax.saxutils import escape
 
 from .checks import Finding
-from .layout import cubby_walls, phone_box, ports_box, profile_section, shelf_outline
+from .layout import (cubby_walls, led_keepout, phone_box, ports_box, profile_section,
+                     shelf_outline)
 from .params import Derived, Params, cubby_width, roof_height
 
 C_WALL = "#333333"
@@ -22,6 +23,7 @@ C_PORTS = "#c0392b"
 C_PHONE = "#7f8c8d"
 C_WARN = "#c0392b"
 C_DIM = "#555555"
+C_LED = "#d4a017"
 
 
 class _Svg:
@@ -139,7 +141,8 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
     s = _Svg()
     pad = 14.0
     wmax = max(cubby_width(p, y, z) for y in (0.0, p.D_cubby) for z in (0.0, p.H_cubby)) / 2.0 + 6.0
-    htop = roof_height(p, 0.0, 0.0)  # highest point of the roof (pocket, at the lip)
+    htop = max(p.H_cubby, roof_height(p, 0.0, 0.0))  # highest roof point (a pocket is at the lip)
+    led_x, led_y, led_r, led_z = led_keepout(p)
 
     # ---- plan view (top left) ----
     ox, oy = pad, pad + 8
@@ -160,6 +163,11 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
     x0, x1, y0, y1, _, _ = ports_box(p)
     s.add('<polygon points="%s" fill="%s" fill-opacity="0.3" stroke="%s" stroke-width="0.3"/>'
           % (_pts(_rect_pts(x0, x1, y0, y1), px, py), C_PORTS, C_PORTS))
+    if led_r > 0:
+        s.add('<circle cx="%.2f" cy="%.2f" r="%.2f" fill="%s" fill-opacity="0.15" stroke="%s" '
+              'stroke-width="0.4" stroke-dasharray="1.5,1"/>'
+              % (px(led_x), py(led_y), led_r, C_LED, C_LED))
+        s.add(_text(px(led_x), py(led_y) + 1, "LED free zone", 2.4, "middle", C_LED))
     s.add(_text(px(0), py(0) + 5, "front lip (driver)", 2.6, "middle", C_DIM))
     s.add(_text(px(0), py(p.D_cubby) - 1.5, "rear wall", 2.6, "middle", C_DIM))
     try:
@@ -191,6 +199,10 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
     x0, x1, _, _, z0, z1 = ports_box(p)
     s.add('<polygon points="%s" fill="%s" fill-opacity="0.3" stroke="%s" stroke-width="0.3" '
           'stroke-dasharray="1.5,1"/>' % (_pts(_rect_pts(x0, x1, z0, z1), qx, qz), C_PORTS, C_PORTS))
+    if led_r > 0:
+        s.add('<polygon points="%s" fill="%s" fill-opacity="0.12" stroke="%s" stroke-width="0.3" '
+              'stroke-dasharray="1.5,1"/>' % (_pts(_rect_pts(led_x - led_r, led_x + led_r, 0.0,
+                                                             led_z), qx, qz), C_LED, C_LED))
     hw_t = cubby_width(p, ym, d.z_top) / 2.0 - p.side_gap
     hw_b = cubby_width(p, ym, d.z_frame_bottom) / 2.0 - p.side_gap
     s.add('<polygon points="%s" fill="%s" fill-opacity="0.35" stroke="%s" stroke-width="0.4"/>' % (
@@ -228,6 +240,10 @@ def overview_svg(p: Params, d: Derived, findings: List[Finding]) -> str:
     _, _, y0, y1, z0, z1 = ports_box(p)
     s.add('<polygon points="%s" fill="%s" fill-opacity="0.3" stroke="%s" stroke-width="0.3"/>'
           % (_pts(_rect_pts(y0, y1, z0, z1), sx, sz), C_PORTS, C_PORTS))
+    if led_r > 0:
+        s.add('<polygon points="%s" fill="%s" fill-opacity="0.12" stroke="%s" stroke-width="0.3" '
+              'stroke-dasharray="1.5,1"/>' % (_pts(_rect_pts(led_y - led_r, led_y + led_r, 0.0,
+                                                             led_z), sx, sz), C_LED, C_LED))
     shelf_end = d.y_rear
     nx0 = d.notch_center_x - p.port_notch_width / 2.0
     nx1 = d.notch_center_x + p.port_notch_width / 2.0

@@ -11,6 +11,7 @@ Grid-cell patterns and the flip-drawer swing math will also live here
 """
 from __future__ import annotations
 
+import math
 from typing import List, Tuple
 
 from .geom2d import GeometryError, Outline, Point
@@ -164,7 +165,8 @@ def profile_section(p: Params, y: float, step: float = 3.0, gap: float = 6.0,
                     corner: float = None) -> Outline:
     """Cubby cross-section at depth y, seen from the driver: x right, z up.
 
-    Floor at z = 0 (Qi pad level), curved side walls, roof with the pocket.
+    Floor at z = 0 (Qi pad level), curved side walls, roof (with the pocket
+    and the bulge where the section crosses them).
     All four corners are chamfered by ``corner`` (default gauge_corner), so a
     rounded transition in the car cannot hold the gauge off the walls.
     Counter-clockwise, no fillets.
@@ -188,22 +190,46 @@ def profile_section(p: Params, y: float, step: float = 3.0, gap: float = 6.0,
     x_edge = hw(h_side) - c
     if c > 0:
         right.append((x_edge, h_side))
-    roof = []  # right to left, sampled only where the pocket lifts the roof
-    if p.roof_pocket_width > 0 and p.roof_pocket_rise > 0 and y < p.roof_pocket_end:
-        half = min(p.roof_pocket_width / 2.0 + p.roof_pocket_blend, x_edge - gap)
-        n = max(2, int(2 * half / step))
-        for i in range(n + 1):
-            x = half - 2.0 * half * i / n
-            roof.append((x, roof_height(p, x, y)))
+    roof = []  # right to left, sampled only where the roof is not flat
+    span = _uneven_roof(p, y)
+    if span is not None:
+        lo, hi = max(span[0], gap - x_edge), min(span[1], x_edge - gap)
+        if hi > lo:
+            n = max(2, int(math.ceil((hi - lo) / step)))
+            for i in range(n + 1):
+                x = hi - (hi - lo) * i / n
+                roof.append((x, roof_height(p, x, y)))
     left = [(-x, zz) for x, zz in reversed(right)]  # ends on the floor
     pts = right + roof + left
     pts = pts[-1:] + pts[:-1]  # start at the left floor point: first edge = floor
     return Outline(pts, None, ["floor"] + ["profile %d" % i for i in range(1, len(pts))])
 
 
+def _uneven_roof(p: Params, y: float):
+    """(x0, x1): where the roof at depth y is not flat (pocket, bulge), or None."""
+    spans = []
+    if p.roof_pocket_width > 0 and p.roof_pocket_rise > 0 and y < p.roof_pocket_end:
+        half = p.roof_pocket_width / 2.0 + p.roof_pocket_blend
+        spans.append((-half, half))
+    r_b = p.roof_bulge_diameter / 2.0
+    if p.roof_bulge_depth > 0 and abs(y - p.led_y) < r_b:
+        w = math.sqrt(r_b * r_b - (y - p.led_y) ** 2)
+        spans.append((p.led_x - w, p.led_x + w))
+    if not spans:
+        return None
+    return min(a for a, _ in spans), max(b for _, b in spans)
+
+
 # --------------------------------------------------------------------------
 # reference geometry for previews
 # --------------------------------------------------------------------------
+
+def led_keepout(p: Params) -> Tuple[float, float, float, float]:
+    """(x, y, radius, z_roof) of the free zone around the roof LED: a vertical
+    column from the Qi pad up to the roof that no part may enter."""
+    r = p.led_keepout_diameter / 2.0
+    return p.led_x, p.led_y, r, roof_height(p, p.led_x, p.led_y)
+
 
 def cubby_walls(p: Params, z: float) -> List[Point]:
     """Side and rear walls at height z as an open polyline (front is open):

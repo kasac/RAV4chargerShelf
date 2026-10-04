@@ -42,8 +42,9 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
     guesses = [n for n in p.placeholders if n not in fitted]
     if fitted:
         add("warning", "unconfirmed_reference",
-            "%d cubby values are estimated from the cubby reference model and not confirmed for "
-            "your car yet: %s. Print the fit coupon and the profile gauge (docs/measuring.md)."
+            "%d cubby values are starting values from the cubby reference model (made for a "
+            "slightly different RAV4 version), not confirmed for your car yet: %s. Print the fit "
+            "coupon and the profile gauge (docs/measuring.md)."
             % (len(fitted), ", ".join(fitted)))
     if guesses:
         add("warning", "placeholders",
@@ -83,6 +84,19 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
 
     # -- ports ----------------------------------------------------------------
     _check_ports(p, d, add)
+
+    # -- roof LED -------------------------------------------------------------
+    r = p.led_keepout_diameter / 2.0
+    if r > 0 and (abs(p.led_x) + r > cubby_width(p, p.led_y, p.H_cubby) / 2.0
+                  or p.led_y - r < 0.0 or p.led_y + r > p.D_cubby):
+        add("warning", "led_position",
+            "the free zone around the roof LED (diameter %.0f at x %.1f, y %.1f) reaches outside "
+            "the cubby: check led_x and led_y" % (p.led_keepout_diameter, p.led_x, p.led_y))
+    if p.roof_bulge_depth > 0 and p.roof_bulge_diameter > p.led_keepout_diameter:
+        add("info", "roof_bulge",
+            "the roof bulge (diameter %.0f, %.1f mm deep) is wider than the LED free zone "
+            "(%.0f): parts near the roof must clear it, and the envelope solid has a flat roof"
+            % (p.roof_bulge_diameter, p.roof_bulge_depth, p.led_keepout_diameter))
 
     # -- insertion through the lip ---------------------------------------------
     if d.shelf_width_max > p.W_lip:

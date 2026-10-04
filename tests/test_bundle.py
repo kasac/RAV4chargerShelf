@@ -110,7 +110,8 @@ def test_bundle_main_in_rhino(tmp_path):
     """, tmp_path)
     assert "fit_coupon: built by boolean" in out
     assert "profile_gauge: built by boolean" in out
-    for layer in ("fit_coupon", "profile_gauge", "envelope", "cubby", "ports", "phone"):
+    for layer in ("fit_coupon", "profile_gauge", "envelope", "cubby", "ports", "phone",
+                  "led_keepout"):
         assert "RAV4chargerShelf::" + layer in out
     assert "breps 3" in out  # coupon, gauge, envelope (the plug and phone boxes are mocks)
 
@@ -144,7 +145,7 @@ def test_bundle_in_grasshopper(tmp_path):
     g = runpy.run_path(BUNDLE, init_globals={"ghenv": ghenv, "export": False},
                        run_name="ghscript")
     assert g["coupon"] is not None and g["gauge"] is not None and g["envelope"] is not None
-    assert len(g["cubby"]) == 6 + 2
+    assert len(g["cubby"]) == 6 + 6 + 2  # wireframe, LED free zone, plug and phone boxes
     assert not doc.Objects.AddBrep.called  # Grasshopper shows, it does not bake
     print(g["report"])
     """, tmp_path)

@@ -9,17 +9,18 @@ The shelf uses the empty space above the plugs. Its deck is perforated, so you c
 plugs through it, and it will carry a drawer (a tip-out drawer on a hinge, or a pull-out drawer as
 the fallback). It fits without tools, glue or drilling.
 
-> **Status: phase 1 – test prints.** The cubby is described by a parametric envelope of about 15
-> numbers, estimated from a reference model of the cavity
-> ([Cubby reference model](#cubby-reference-model)). Two quick test prints check it in your car;
-> only the plugs and the phone still need measuring.
+> **Status: phase 1 – test prints.** The cubby is described by a parametric envelope of about 20
+> numbers. Its walls and corners start from values estimated from a reference model made for a
+> slightly different RAV4 version ([Cubby reference model](#cubby-reference-model)); the roof
+> follows the GR Sport PHEV. Two quick test prints check the shape in your car. The LED in the roof
+> must stay uncovered, which will change the shelf design ([open decisions](#open-decisions-after-the-test-prints)).
 
 _Photos: placeholder until the first print._
 
 | Phase | What | State |
 |---|---|---|
 | 1 | Repo, parameters, pure-Python core, tests, CI | done |
-| 1 | **Cubby envelope** estimated from the reference model; comparison and fit tools | done |
+| 1 | **Cubby envelope**: starting values from the reference model, GR Sport roof with the LED; comparison and fit tools | done |
 | 1 | **Test prints**: fit coupon and profile gauge, from the command line (no Rhino), Rhino 8 and Grasshopper | done, Rhino/GH path **untested** |
 | 2 | Shelf: frame, perforation styles (hex, square, diamond, round, slot, triangle), ribs, port notch, support concept | after the test prints |
 | 3 | Pull-out drawer on rails (baseline) | planned |
@@ -69,8 +70,8 @@ need the rest of the repo.
 3. Type `ScriptEditor`, make a new Python 3 script (or **File → Open** the downloaded file), paste,
    and press **Run** (F5).
 
-The fit coupon, the profile gauge, the cubby wireframe, the plugs and the phone appear on layers
-`RAV4chargerShelf::<part>`, and a report prints in the output pane. The `envelope` layer (the cubby
+The fit coupon, the profile gauge, the cubby wireframe, the plugs, the phone and the LED free zone
+appear on layers `RAV4chargerShelf::<part>`, and a report prints in the output pane. The `envelope` layer (the cubby
 as a solid) starts switched off; turn it on in X-Ray display mode to see the parts inside it.
 
 Change your values in the **SETTINGS** block at the top of the file (`MY_VALUES`), then run again.
@@ -86,11 +87,17 @@ The cubby is described by a small parametric envelope. Every part derives from i
 - **Side walls:** seen from the front, one circular arc (`wall_radius` ≈ 505 mm, leaning
   `wall_lean_deg` ≈ 6.8° at `z_ref`), moved along the depth with a linear taper (`W_rear_delta`).
 - **Rear corners:** a chamfer softened by two fillets.
-- **Roof:** flat at `H_cubby`, with a pocket in the middle that rises toward the front.
+- **Roof:** flat at `H_cubby` with a straight front edge, and a slight round bulge down in the
+  middle (`roof_bulge_depth`, `roof_bulge_diameter`) around the LED that lights the Qi pad and the
+  plugs (`led_x`, `led_y`). Some RAV4 versions instead have a raised pocket at the front of the
+  roof; `roof_pocket_rise` is 0 for the GR Sport.
+- **LED free zone:** no part may enter a 50 mm column under the LED (`led_keepout_diameter`), so it
+  stays uncovered.
 
-The defaults were estimated from the cubby-constraint-reference-model, which stands in for a 3D
-scan of the cavity ([Cubby reference model](#cubby-reference-model)). `envelope_offset` covers the
-unknown distance between that model and your real walls; the fit coupon measures it.
+The walls and rear corners start from values estimated from the cubby-constraint-reference-model,
+a model made for a slightly different RAV4 version ([Cubby reference model](#cubby-reference-model)).
+They're starting values; the test prints check them. `envelope_offset` covers the unknown distance
+between that model and your real walls; the fit coupon measures it.
 
 ## The test prints
 
@@ -99,7 +106,7 @@ unknown distance between that model and your real walls; the fit coupon measures
   width, wall lean, taper, rear corners, depth and the port notch against your real plugs.
 - **Profile gauge** (~11 g, ~20 min): a flat frame with the cubby cross-section seen from the
   front, 30 mm behind the lip. It tests the wall curve over the full height, the floor height and
-  the roof pocket.
+  the roof.
 
 If both fit, the cubby needs no measuring. [docs/measuring.md](docs/measuring.md) explains how to
 try them and which parameter to change for each observation.
@@ -136,7 +143,7 @@ they sit in the cubby in Rhino. Exports are rotated into print orientation.
 ```
 params/default.json            all parameters, placeholders marked
 params/measured.example.json   worksheet: copy to params/measured.json
-params/cubby_reference_fit.json  the envelope estimated from the reference model, with its assumptions
+params/cubby_reference_fit.json  the envelope fitted to the reference model, with its assumptions
 src/rav4shelf/
   params.py      load / validate / derive parameters, cubby model pure Python, tested
   geom2d.py      polygons with fillets, offsets, tessellation     pure Python, tested
@@ -186,7 +193,8 @@ including the exact message.
 - [ ] The report says `built by boolean`. If it says `joined faces (boolean failed: …)`, the part is
       still fine, but please send the message.
 - [ ] Layers `cubby`, `ports`, `phone` show the cubby wireframe, the plug box and the phone box in
-      sensible places. The profile gauge stands upright about 30 mm behind the lip.
+      sensible places. Layer `led_keepout` shows a column in the middle, under the roof LED. The
+      profile gauge stands upright about 30 mm behind the lip.
 - [ ] Layer `envelope` (switched off at first) holds the cubby as one closed solid, and the coupon's
       edge band touches its side walls.
 - [ ] With `EXPORT_FOLDER` set: `fit_coupon.3mf` opens in PrusaSlicer **without** "errors repaired"
@@ -205,30 +213,23 @@ including the exact message.
 
 ## Cubby reference model
 
-There is no 3D scan of the cubby yet. Its size and shape were instead estimated from a third-party
-reference model of the cavity, called the **cubby-constraint-reference-model** in this project. It
-is used only as a stand-in for a scan: to estimate the cavity's dimensions, which the test prints
-then check in the car. **The file is not in this repository and must not be committed**; only the
-fitted cavity numbers are ([`params/cubby_reference_fit.json`](params/cubby_reference_fit.json)).
-See [reference/README.md](reference/README.md) for how to re-run the comparison if you have it.
+There is no 3D scan of the cubby. The starting values for its side walls and rear corners were
+estimated from a third-party model, called the **cubby-constraint-reference-model** in this
+project. It was made for a slightly different RAV4 version and doesn't match the GR Sport PHEV's
+roof, so it is only a starting point: the test prints and measurements in the car decide.
+**The file is not in this repository and must not be committed**; only the numbers fitted to it
+are ([`params/cubby_reference_fit.json`](params/cubby_reference_fit.json)). See
+[reference/README.md](reference/README.md) for how to re-run the comparison if you have it.
 
 How the estimate works: the tools sample the model's outer surface (plan sections every 2 mm of
 height, the top surface on a grid) and fit the envelope parameters to those points by least
-squares. A test checks that the defaults in `default.json` (marked `"basis": "reference"`) equal
-the recorded fit. On CI, where the file is absent, the fitter is tested on meshes this project
-generates: it recovers known parameters, for straight and curved walls.
+squares. The defaults use the fitted walls and corners (marked `"basis": "reference"`) but not its
+roof; a test keeps them in step with the fit record. On CI, where the file is absent, the fitter
+is tested on meshes this project generates.
 
-**How well the envelope matches the reference surface**
-
-| Feature | Envelope model | Deviation |
-|---|---|---|
-| side walls (about 1150 points) | one arc R ≈ 505 mm, lean 6.8° at z 55, taper −9.4 mm | RMS 0.14 mm, max 0.83 mm |
-| rear corners | chamfer + R67 / R12.6 fillets | ±0.47 mm |
-| roof (about 1200 points) | flat + pocket 136 mm wide, +11.6 mm toward the front | RMS 0.09 mm, max 0.83 mm |
-
-Assumptions the model can't settle (the test prints check them): the floor is at the model's
-lowest points, its front is 8 mm behind the lip, and its surface may sit some distance inside the
-real walls (`envelope_offset`).
+Assumptions about the model that the test prints check: the floor is at its lowest points, its
+front is 8 mm behind the lip, and its surface may sit some distance inside the real walls
+(`envelope_offset`).
 
 ## Design notes and deviations from the brief
 
@@ -249,13 +250,13 @@ real walls (`envelope_offset`).
   `X_ports` (centre) and `W_ports` (width). `D_ports` (how far the plugs stick out) was added
   because the notch depth depends on it.
 - **`W_top` / `W_bottom` → an envelope:** the brief's floor and roof widths would be interpolated
-  with a straight line. The reference model showed the walls are curved, so the cubby is now an
+  with a straight line. The reference model suggested curved walls, so the cubby is now an
   envelope: width at `z_ref`, wall lean and radius, taper, two-radius rear corners, and a roof with
-  a pocket. It's estimated from the reference model and confirmed by test prints instead of being
-  measured.
+  the LED bulge. Its starting values come from the reference model and the car; the test prints
+  confirm or correct them.
 - **Added:** `W_lip` (insertion check), `envelope_offset` (distance between the reference surface
-  and the real walls), and phone and Qi-spot parameters (clearance checks, later the drawer swing
-  check).
+  and the real walls), phone and Qi-spot parameters (clearance checks, later the drawer swing
+  check), and the roof LED with its free zone.
 - **Second test print:** besides the brief's fit coupon there is a profile gauge, which checks the
   curved walls, floor height and roof that the coupon alone can't see.
 - **No `.ghx`:** instead of a hand-made, untestable `.ghx`, the Grasshopper component can **generate
@@ -265,9 +266,13 @@ real walls (`envelope_offset`).
 
 ## Open decisions (after the test prints)
 
-1. **How the shelf is held.** It could *wedge* between the leaning side walls (they lean 6.8°, so
+1. **What to build.** The LED in the middle of the roof lights the Qi pad and the plugs, and must
+   stay uncovered: a 50 mm free zone (`led_keepout_diameter`). A full-width shelf would cover it,
+   so the design will probably change to small storage spaces at the sides of the roof. To be
+   discussed once the test prints fit.
+2. **How it is held.** It could *wedge* between the leaning side walls (they lean 6.8°, so
    a wedge fit works, but the height then depends on the width tolerance), or rest on *side
    plates* that reach down along the walls (exact height, felt pads against the trim). The test
    prints show which suits the car.
-2. Shelf height versus drawer height: this depends on `H_ports_top` and the roof (19.9 mm above a
-   58 mm shelf at the sides, up to 31 mm under the roof pocket at the front).
+3. Shelf height versus drawer height (if a shelf stays): this depends on `H_ports_top` and the
+   roof (19.9 mm above a 58 mm shelf, less under the bulge).

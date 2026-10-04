@@ -1,5 +1,5 @@
 {
-  "_source": "Estimated from the cubby-constraint-reference-model (a stand-in for a 3D scan of the cubby) by 'python tools/rav4shelf.py reference --write-params'. That file is not in the repo; only these numbers describing the cavity are. The same values are the defaults in params/default.json.",
+  "_source": "Estimated from the cubby-constraint-reference-model (made for a slightly different RAV4 version) by 'python tools/rav4shelf.py reference --write-params'. That file is not in the repo; only these numbers describing the cavity are. params/default.json starts from them, except the roof: the GR Sport PHEV has no roof pocket (roof_pocket_rise 0) and a bulge around the roof LED.",
   "_model": "Side walls: one circular arc seen from the front (wall_radius, wall_lean_deg at z_ref) moved along the depth with a linear taper (W_rear_delta). Rear corners: chamfer + two fillets. Roof: flat at H_cubby with a pocket in the middle that rises toward the front.",
   "_assumptions": "Not in the file, assumed: its lowest points reach the Qi pad, its front is 8 mm behind the lip, its back 1 mm from the rear wall. The car's walls may be a little outside this envelope (unknown clearance): set envelope_offset from the fit coupon.",
   "_fit": "side walls rms 0.14 / max 0.83 mm (1150 points), rear corners max 0.47 mm, roof rms 0.09 / max 0.83 mm",

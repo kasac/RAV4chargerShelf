@@ -132,12 +132,20 @@ def test_reference_params_file_is_valid():
     assert not checks.has_errors(checks.run_checks(p, params.derive(p)))
 
 
+# where the GR Sport PHEV differs from the car the reference model was made for
+GR_SPORT = {"roof_pocket_rise": 0.0}
+# the other roof pocket values only matter when roof_pocket_rise > 0
+POCKET_SHAPE = {"roof_pocket_width", "roof_pocket_blend", "roof_pocket_end", "roof_pocket_shape"}
+
+
 def test_defaults_are_the_fitted_values():
     with open(REF_PARAMS, encoding="utf-8") as f:
         fitted = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
     spec = params.load_spec()
-    assert {k: spec[k]["value"] for k in fitted} == fitted
-    assert all(spec[k].get("basis") == "reference" for k in fitted if k != "z_ref")
+    assert {k: spec[k]["value"] for k in fitted} == dict(fitted, **GR_SPORT)
+    unconfirmed = set(fitted) - {"z_ref"} - set(GR_SPORT) - POCKET_SHAPE
+    assert all(spec[k].get("basis") == "reference" for k in unconfirmed)
+    assert not any(spec[k].get("basis") for k in set(GR_SPORT) | POCKET_SHAPE)
 
 
 # --------------------------------------------------------------------------
@@ -164,10 +172,11 @@ def test_reference_file_is_the_analysed_one(refmodel):
 
 
 def test_envelope_matches_reference_model(refmodel):
-    """The default envelope (about 15 numbers) approximates the reference
+    """The envelope model (about 15 numbers) approximates the reference
     model's outer surface: side walls over their full height, rear corners
-    and roof."""
-    rep = reference.envelope_report(params.load_params(), refmodel)
+    and roof. (The defaults use its walls and corners, not its roof.)"""
+    p = params.load_params(REF_PARAMS, {"roof_bulge_depth": 0.0})  # its own roof, no bulge
+    rep = reference.envelope_report(p, refmodel)
     lines = "\n".join(reference.envelope_lines(rep))
     assert rep["walls"]["n"] > 1000 and rep["walls"]["rms"] < 0.2, lines
     assert rep["walls"]["max_abs"] < 1.0, lines

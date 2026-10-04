@@ -117,7 +117,8 @@ Paste `rhino/gh_components/profile_gauge_component.py`.
 
 Paste `rhino/gh_components/context_component.py`.
 
-- Input: `P`. Outputs: `cubby` (wireframe of the cubby), `ports` (box around the plug cluster),
+- Input: `P`. Outputs: `cubby` (wireframe of the cubby and of the free zone under the roof LED),
+  `ports` (box around the plug cluster),
   `phone` (box of the phone on the Qi pad).
 - To give them colours, feed `ports` and `phone` into **Custom Preview** components (Display tab)
   with a **Colour Swatch** on the Material input (red for the plugs, grey for the phone).

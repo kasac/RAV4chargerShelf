@@ -123,9 +123,9 @@ def profile_gauge_component(P, tol=geometry.DEFAULT_TOL):
 
 
 def context_component(P):
-    """Context component -> (cubby wireframe, plug cluster box, phone box)."""
+    """Context component -> (cubby wireframe + LED free zone, plug cluster box, phone box)."""
     ctx = geometry.build_context(P, params.derive(P))
-    return ctx["cubby"], ctx["ports"], ctx["phone"]
+    return ctx["cubby"] + ctx["led_keepout"], ctx["ports"], ctx["phone"]
 
 
 def export_component(name, breps, out_dir=None, run=False):

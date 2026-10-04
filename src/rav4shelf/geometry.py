@@ -186,8 +186,9 @@ def build_profile_gauge(p: Params, d: Derived, tol: float = DEFAULT_TOL):
 
 def build_envelope(p: Params, d: Derived, tol: float = DEFAULT_TOL) -> rg.Brep:
     """The cubby envelope as a closed solid from the floor to the flat roof
-    (the roof pocket is left out): a smooth loft through plan sections. A
-    reference body to design against; never exported as a part."""
+    (the roof pocket and bulge are left out; the LED free zone shows the
+    bulge's area): a smooth loft through plan sections. A reference body to
+    design against; never exported as a part."""
     curves = [outline_curve(layout.cubby_outline(p, z), z) for z in layout.envelope_levels(p)]
     lofts = rg.Brep.CreateFromLoft(_net_list(rg.Curve, curves), rg.Point3d.Unset,
                                    rg.Point3d.Unset, rg.LoftType.Normal, False)
@@ -201,17 +202,27 @@ def build_envelope(p: Params, d: Derived, tol: float = DEFAULT_TOL) -> rg.Brep:
 
 def build_context(p: Params, d: Derived) -> dict:
     """Reference geometry in the car frame: cubby wireframe, plug cluster,
-    phone on the Qi pad. For display only, never exported."""
+    phone on the Qi pad, free zone around the roof LED. For display only,
+    never exported."""
     curves = []
     for z in (0.0, p.H_cubby):
         pts = [rg.Point3d(x, y, z) for x, y in layout.cubby_walls(p, z)]
         curves.append(rg.PolylineCurve(_net_list(rg.Point3d, pts)))
     for (xa, ya), (xb, yb) in zip(layout.cubby_walls(p, 0.0), layout.cubby_walls(p, p.H_cubby)):
         curves.append(rg.LineCurve(rg.Point3d(xa, ya, 0.0), rg.Point3d(xb, yb, p.H_cubby)))
+    led = []  # wireframe column: circles at the pad and the roof, four vertical lines
+    cx, cy, r, z_roof = layout.led_keepout(p)
+    if r > 0:
+        for z in (0.0, z_roof):
+            led.append(rg.ArcCurve(rg.Circle(rg.Point3d(cx, cy, z), r)))
+        for dx, dy in ((r, 0.0), (0.0, r), (-r, 0.0), (0.0, -r)):
+            led.append(rg.LineCurve(rg.Point3d(cx + dx, cy + dy, 0.0),
+                                    rg.Point3d(cx + dx, cy + dy, z_roof)))
     return {
         "cubby": curves,
         "ports": [box_brep(*layout.ports_box(p))],
         "phone": [box_brep(*layout.phone_box(p))],
+        "led_keepout": led,
     }
 
 

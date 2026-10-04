@@ -37,7 +37,8 @@ def test_all_cubby_measurements_are_marked_placeholder(p):
 
 def test_reference_based_values_are_the_fitted_cubby_values(p):
     fitted = set(p.reference_based)
-    assert {"W_ref", "wall_radius", "rear_corner_length", "roof_pocket_rise"} <= fitted
+    assert {"W_ref", "wall_radius", "rear_corner_length", "H_cubby"} <= fitted
+    assert "roof_pocket_rise" not in fitted  # the GR Sport differs from the reference here
     assert "H_ports_top" not in fitted and "shelf_height" not in fitted
     assert fitted <= set(p.placeholders)
 
@@ -142,13 +143,26 @@ def test_wall_outside_its_arc_raises(p):
 
 def test_roof_pocket(p):
     p2 = p.with_overrides({"H_cubby": 78, "roof_pocket_width": 100, "roof_pocket_blend": 10,
-                           "roof_pocket_rise": 12, "roof_pocket_end": 110, "roof_pocket_shape": 1})
+                           "roof_pocket_rise": 12, "roof_pocket_end": 110, "roof_pocket_shape": 1,
+                           "roof_bulge_depth": 0})
     assert params.roof_height(p2, 0, params.MEAS_INSET) == pytest.approx(90)
     assert params.roof_height(p2, 0, 60) == pytest.approx(84)       # linear ramp
     assert params.roof_height(p2, 0, 115) == pytest.approx(78)      # behind the pocket
     assert params.roof_height(p2, 55, params.MEAS_INSET) == pytest.approx(84)  # half-way blend
     assert params.roof_height(p2, 70, 20) == pytest.approx(78)      # beside it
     assert params.roof_height(p2.with_overrides({"roof_pocket_width": 0}), 0, 10) == 78
+
+
+def test_gr_sport_roof_has_no_pocket_and_a_bulge_at_the_led(p):
+    assert params.roof_height(p, 0.0, params.MEAS_INSET) == p.H_cubby  # straight front edge
+    lowest = params.roof_height(p, p.led_x, p.led_y)
+    assert lowest == pytest.approx(p.H_cubby - p.roof_bulge_depth)
+    r = p.roof_bulge_diameter / 2.0
+    half = params.roof_height(p, p.led_x + r / 2.0, p.led_y)
+    assert half == pytest.approx(p.H_cubby - p.roof_bulge_depth / 2.0)  # smooth, half-way
+    assert params.roof_height(p, p.led_x, p.led_y + r) == p.H_cubby     # ends at its edge
+    flat = p.with_overrides({"roof_bulge_depth": 0})
+    assert params.roof_height(flat, p.led_x, p.led_y) == p.H_cubby
 
 
 def test_derived_values(p, d):

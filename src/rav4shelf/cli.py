@@ -76,11 +76,15 @@ def run_reference(p, d, args) -> int:
     except (GeometryError, params.ParamError) as exc:
         env_lines, cmp_lines = ["cannot build your envelope: %s" % exc], []
     lines += ["  " + x for x in env_lines]
+    if p.roof_pocket_rise == 0 or p.roof_bulge_depth > 0:
+        lines.append("  (the roof is expected to differ: the GR Sport PHEV has no roof pocket and "
+                     "a bulge around the roof LED)")
     lines += ["", "YOUR SHELF at its edge band vs the reference at the same heights "
                   "(includes side_gap and envelope_offset):"]
     lines += ["  " + x for x in cmp_lines]
     values, quality = reference.fit_params(ref)
-    lines += ["", "FITTED ENVELOPE (params/cubby_reference_fit.json, also the defaults):"]
+    lines += ["", "FITTED ENVELOPE (params/cubby_reference_fit.json; the defaults start from it, "
+                  "except the roof):"]
     lines += ["  %-20s %s" % (k, v) for k, v in values.items()]
     lines += ["  " + x for x in reference.envelope_lines(quality)]
     text = "\n".join(lines)

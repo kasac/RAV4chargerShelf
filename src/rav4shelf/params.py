@@ -278,10 +278,17 @@ def cubby_width(p: Params, y: float, z: float) -> float:
 
 
 def roof_height(p: Params, x: float, y: float) -> float:
-    """Height of the cubby roof above the pad at (x, y): flat at H_cubby, plus
-    the pocket in the middle that rises toward the front."""
+    """Height of the cubby roof above the pad at (x, y): flat at H_cubby,
+    raised by the roof pocket some RAV4 versions have (0 on the GR Sport) and
+    lowered by the bulge around the LED."""
+    return p.H_cubby + roof_pocket(p, x, y) - roof_bulge(p, x, y)
+
+
+def roof_pocket(p: Params, x: float, y: float) -> float:
+    """How far the roof pocket lifts the roof at (x, y): full height over the
+    middle roof_pocket_width, rising toward the front."""
     if p.roof_pocket_width <= 0 or p.roof_pocket_rise <= 0 or y >= p.roof_pocket_end:
-        return p.H_cubby
+        return 0.0
     along = ((p.roof_pocket_end - y) / (p.roof_pocket_end - MEAS_INSET)) ** p.roof_pocket_shape
     half = p.roof_pocket_width / 2.0
     ax = abs(x)
@@ -292,7 +299,19 @@ def roof_height(p: Params, x: float, y: float) -> float:
         across = 1.0 - t * t * (3.0 - 2.0 * t)  # smoothstep
     else:
         across = 0.0
-    return p.H_cubby + p.roof_pocket_rise * along * across
+    return p.roof_pocket_rise * along * across
+
+
+def roof_bulge(p: Params, x: float, y: float) -> float:
+    """How far the roof bulge hangs below H_cubby at (x, y): a smooth round
+    bump of roof_bulge_diameter centred on the LED, 0 outside it."""
+    r_b = p.roof_bulge_diameter / 2.0
+    if r_b <= 0 or p.roof_bulge_depth <= 0:
+        return 0.0
+    r = math.hypot(x - p.led_x, y - p.led_y)
+    if r >= r_b:
+        return 0.0
+    return p.roof_bulge_depth * 0.5 * (1.0 + math.cos(math.pi * r / r_b))
 
 
 class Derived:

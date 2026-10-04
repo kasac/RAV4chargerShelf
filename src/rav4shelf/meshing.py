@@ -142,7 +142,7 @@ def profile_gauge_mesh(p: Params, d: Derived) -> Mesh:
 
 def envelope_mesh(p: Params, d: Derived) -> Mesh:
     """The cubby envelope as a closed solid, floor to flat roof (the roof
-    pocket is left out). A reference body to design against."""
+    pocket and bulge are left out). A reference body to design against."""
     from .layout import cubby_outline, envelope_levels
 
     rings = [[(x, y, z) for x, y in cubby_outline(p, z).ring(p.arc_segments_per_90)]

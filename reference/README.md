@@ -1,11 +1,11 @@
 # Reference model (kept out of the repo)
 
-The cubby envelope's defaults were estimated from a reference model of the cubby, called the
-**cubby-constraint-reference-model** in this project. It stands in for a 3D scan of the car's
-cavity, and it is used only to estimate the cavity's size and shape. It is a third-party file
-that may not be redistributed, so git ignores everything in this folder except this README.
-**Never commit it.** Only the ~15 numbers describing the cavity are in the repo:
-`params/cubby_reference_fit.json`, which are also the defaults in `params/default.json`.
+The starting values for the cubby's side walls and rear corners were estimated from a third-party
+model, called the **cubby-constraint-reference-model** in this project. It was made for a slightly
+different RAV4 version (its roof doesn't match the GR Sport PHEV), so it is only a starting point
+that the test prints check. It may not be redistributed, so git ignores everything in this folder
+except this README. **Never commit it.** Only the numbers fitted to it are in the repo:
+`params/cubby_reference_fit.json`. `params/default.json` starts from them, except for the roof.
 
 If you have the file, save it here as `cubby-constraint-reference-model.stl`, then:
 

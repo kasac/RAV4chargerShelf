@@ -145,8 +145,11 @@ def test_build_context(fake):
     from rav4shelf import geometry
     p = params.load_params()
     ctx = geometry.build_context(p, params.derive(p))
-    assert set(ctx) == {"cubby", "ports", "phone"}
+    assert set(ctx) == {"cubby", "ports", "phone", "led_keepout"}
     assert len(ctx["cubby"]) == 2 + 4
+    assert len(ctx["led_keepout"]) == 2 + 4  # circles at pad and roof, four vertical lines
+    p0 = p.with_overrides({"led_keepout_diameter": 0})
+    assert geometry.build_context(p0, params.derive(p0))["led_keepout"] == []
 
 
 def _gh_source(nick, value):

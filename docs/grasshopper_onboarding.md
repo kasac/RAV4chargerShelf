@@ -96,7 +96,8 @@ lines); that's expected, because the whole project is inside.
 6. Add a **Panel** and wire `report` into it. Make the Panel bigger by dragging its corner.
 
 The first run takes a few seconds. Then the fit coupon, the profile gauge (standing upright 30 mm
-behind the lip) and the cubby envelope appear in red in the viewports. If you see nothing, zoom out
+behind the lip) and the cubby envelope appear in red in the viewports. The `cubby` output also
+holds a column in the middle: the free zone under the roof LED, where no part may go. If you see nothing, zoom out
 in Rhino: the cubby is about 240 mm wide, around the origin.
 
 The report lists the derived dimensions, every check, and the values still unconfirmed for your

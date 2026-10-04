@@ -32,6 +32,7 @@ LAYER_COLORS = {
     "envelope": (170, 170, 170),
     "ports": (192, 57, 43),
     "phone": (127, 140, 141),
+    "led_keepout": (241, 196, 15),
 }
 
 # Created switched off: the envelope solid would hide the parts inside it.

@@ -1,11 +1,11 @@
 """Estimate the cubby envelope from a reference model of the cavity, and
 compare the two. Pure Python (no Rhino, no numpy).
 
-The cubby-constraint-reference-model is a third-party 3D model that fills the
-cubby closely; it stands in for a 3D scan of the car's cavity. It is used only
-to estimate the cavity's size and shape: our envelope is a small parametric
-model (params.cubby_half_width, params.roof_height, layout.shelf_outline)
-fitted to its outer surface. The file itself is not part of this repository
+The cubby-constraint-reference-model is a third-party 3D model made for a
+slightly different RAV4 version. It is used only for starting values of the
+cavity's size and shape: our envelope is a small parametric model
+(params.cubby_half_width, params.roof_height, layout.shelf_outline) fitted to
+its outer surface, and the test prints in the car decide. The file itself is not part of this repository
 and may not be redistributed: put it in reference/ (git-ignored) as
 cubby-constraint-reference-model.stl.
 
@@ -382,8 +382,8 @@ def fit_roof(samples):
     names = ("H_cubby", "roof_pocket_width", "roof_pocket_blend", "roof_pocket_rise",
              "roof_pocket_end", "roof_pocket_shape")
 
-    class Roof(object):
-        pass
+    class Roof(object):  # only the pocket: no bulge
+        roof_bulge_depth = roof_bulge_diameter = led_x = led_y = 0.0
 
     def model(v):
         r = Roof()
@@ -590,10 +590,11 @@ def write_params_file(path: str, values: dict, quality: dict, ref: PlacedReferen
     spec = ref.spec
     w, c, r = quality["walls"], quality["rear_corners"], quality["roof"]
     doc = {
-        "_source": ("Estimated from the %s (a stand-in for a 3D scan of the cubby) by "
+        "_source": ("Estimated from the %s (made for a slightly different RAV4 version) by "
                     "'python tools/rav4shelf.py reference --write-params'. That file is not in the "
-                    "repo; only these numbers describing the cavity are. The same values are the "
-                    "defaults in params/default.json." % spec.name),
+                    "repo; only these numbers describing the cavity are. params/default.json "
+                    "starts from them, except the roof: the GR Sport PHEV has no roof pocket "
+                    "(roof_pocket_rise 0) and a bulge around the roof LED." % spec.name),
         "_model": ("Side walls: one circular arc seen from the front (wall_radius, wall_lean_deg at "
                    "z_ref) moved along the depth with a linear taper (W_rear_delta). Rear corners: "
                    "chamfer + two fillets. Roof: flat at H_cubby with a pocket in the middle that "

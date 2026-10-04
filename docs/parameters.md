@@ -25,11 +25,15 @@ Used by: the envelope: fit coupon, profile gauge, shelf (defaults estimated from
 | `rear_corner_inset` | 4.84 | mm | 0 .. 50 | PH R | ... and ends this far in from the side wall on the rear wall. |
 | `rear_corner_r_side` | 67.33 | mm | 0 .. 300 | PH R | Fillet radius where the rear-corner chamfer meets the side wall. |
 | `rear_corner_r_back` | 12.57 | mm | 0 .. 100 | PH R | Fillet radius where the rear-corner chamfer meets the rear wall. |
-| `roof_pocket_width` | 135.86 | mm | 0 .. 350 | PH R | The roof is higher in the middle toward the front (a pocket under the climate panel): width of its full-height part. 0 = flat roof. |
-| `roof_pocket_blend` | 9.82 | mm | 0 .. 100 | PH R | Width of the smooth transition on each side of the roof pocket. |
-| `roof_pocket_rise` | 11.62 | mm | 0 .. 100 | PH R | How much higher than H_cubby the roof pocket is, 10 mm behind the lip. |
-| `roof_pocket_end` | 107.68 | mm | 10 .. 300 | PH R | Distance from the lip where the roof pocket has flattened out to H_cubby. |
-| `roof_pocket_shape` | 1.47 |  | 0.5 .. 4 | PH R | Shape of the pocket rise along the depth: 1 = straight ramp, 2 = parabola. |
+| `roof_pocket_rise` | 0 | mm | 0 .. 100 |  | Some RAV4 versions have a raised pocket in the middle of the roof toward the front (an arch-shaped recess at the cabin-facing edge): how much higher than H_cubby it is, 10 mm behind the lip. 0 = no pocket: on the GR Sport PHEV the front edge of the roof is straight. |
+| `roof_pocket_width` | 135.86 | mm | 0 .. 350 |  | Roof pocket (only used if roof_pocket_rise > 0): width of its full-height part. |
+| `roof_pocket_blend` | 9.82 | mm | 0 .. 100 |  | Roof pocket (only used if roof_pocket_rise > 0): width of the smooth transition on each side. |
+| `roof_pocket_end` | 107.68 | mm | 10 .. 300 |  | Roof pocket (only used if roof_pocket_rise > 0): distance from the lip where it has flattened out to H_cubby. |
+| `roof_pocket_shape` | 1.47 |  | 0.5 .. 4 |  | Roof pocket (only used if roof_pocket_rise > 0): shape of the rise along the depth, 1 = straight ramp, 2 = parabola. |
+| `led_x` | 0 | mm | -100 .. 100 |  | Lateral position of the LED in the roof (it lights the Qi pad and the plugs), from the cubby centreline. It sits in the middle. |
+| `led_y` | 65 | mm | 0 .. 300 | PH | Distance from the front lip to the centre of the roof LED. Guess: the middle of the cubby. |
+| `roof_bulge_depth` | 3 | mm | 0 .. 30 | PH | The roof bulges down slightly in the middle, with the LED at its centre: how far its lowest point is below H_cubby. 0 = flat roof. Guess. |
+| `roof_bulge_diameter` | 60 | mm | 0 .. 250 | PH | Diameter of the roof bulge, modelled as a smooth round bump centred on the LED. Guess. |
 | `W_lip` | 236 | mm | 60 .. 350 | PH R | Narrowest width of the opening at the front lip, at shelf height. Only used to check that the shelf can be inserted flat. Default: the reference model (235.2 wide) goes in. |
 
 ## ports
@@ -74,6 +78,7 @@ Used by: fit coupon, shelf
 | `port_notch_radius` | 3 | mm | 0 .. 20 |  | Corner radius of the notch. |
 | `port_clearance` | 3 | mm | 0 .. 20 |  | Minimum air gap the checks demand around plugs and cables. |
 | `phone_clearance_min` | 20 | mm | 5 .. 100 |  | Minimum free height under the lowest part of the shelf, for the phone on the Qi pad plus room to slide it in and out. |
+| `led_keepout_diameter` | 50 | mm | 0 .. 150 |  | Free zone around the roof LED (the LED itself is about 15 mm): no part may be built inside this circle, from the roof down to the Qi pad, so the LED stays uncovered and still lights the charger and plugs. 0 = no free zone. |
 
 ## strength
 

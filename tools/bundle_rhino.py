@@ -50,7 +50,8 @@ MY_VALUES = {
 # "envelope" (the cubby as a solid, to design against).
 BUILD = ["fit_coupon", "profile_gauge", "envelope"]
 
-# Show the cubby wireframe, the plug cluster and the phone as reference.
+# Show the cubby wireframe, the plug cluster, the phone and the free zone
+# around the roof LED as reference.
 SHOW_CUBBY = True
 
 # Folder for STL + 3MF + STEP files of the test prints, e.g.
@@ -200,7 +201,7 @@ def _finish(component, report, parts, envelope, context):
     g["coupon"] = parts.get("fit_coupon", (None, None))[1]
     g["gauge"] = parts.get("profile_gauge", (None, None))[1]
     g["envelope"] = envelope
-    g["cubby"] = context.get("cubby", []) + context.get("ports", []) + context.get("phone", [])
+    g["cubby"] = sum((context.get(k, []) for k in ("cubby", "led_keepout", "ports", "phone")), [])
     g["report"] = text
 
 
