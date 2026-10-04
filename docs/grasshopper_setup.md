@@ -1,4 +1,9 @@
-# Grasshopper setup (about 10 minutes)
+# Grasshopper setup, repo-linked (advanced, about 10 minutes)
+
+> **New to Grasshopper, or just want the model?** Use the single Script component in
+> [grasshopper_onboarding.md](grasshopper_onboarding.md) instead: one component, one pasted file,
+> no repo needed. This page is for working on the Python code in `src/`: each part gets its own
+> component that imports the code from your clone, and a **reload** button picks up your edits.
 
 The definition only holds thin wrapper components. All the logic lives in `src/rav4shelf/`, so it
 stays diff-able in Git. Each wrapper is pasted from `rhino/gh_components/*.py` and calls one function.

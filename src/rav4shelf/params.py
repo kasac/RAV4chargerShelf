@@ -33,11 +33,19 @@ class ParamError(ValueError):
 # spec
 # --------------------------------------------------------------------------
 
+# The single-file Rhino script (rhino/rav4shelf_rhino.py) has no repo next to
+# it: it puts the contents of default.json here instead.
+EMBEDDED_SPEC = None
+
+
 def load_spec(path: str = None) -> Dict[str, dict]:
     """Read default.json and return {name: spec} in file order."""
-    path = path or DEFAULT_SPEC_PATH
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    if path is None and EMBEDDED_SPEC is not None and not os.path.isfile(DEFAULT_SPEC_PATH):
+        data, path = json.loads(EMBEDDED_SPEC), "embedded default.json"
+    else:
+        path = path or DEFAULT_SPEC_PATH
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
     if data.get("_format") != "rav4shelf-params-v1":
         raise ParamError("%s: unknown or missing _format" % path)
     specs = data["params"]
@@ -63,7 +71,7 @@ def _check_spec(name: str, s: dict) -> None:
             raise ParamError("spec '%s' has min > max" % name)
     if t == "choice" and not s.get("choices"):
         raise ParamError("spec '%s' has no choices" % name)
-    if s.get("basis", "vela3d") != "vela3d":
+    if s.get("basis", "reference") != "reference":
         raise ParamError("spec '%s' has unknown basis '%s'" % (name, s["basis"]))
     # the default itself must be valid
     _coerce(name, s, s["value"])
@@ -156,8 +164,8 @@ class Params:
 
     @property
     def reference_based(self) -> List[str]:
-        """Placeholders whose default was fitted to the Vela3D reference model."""
-        return [n for n in self.placeholders if self._spec[n].get("basis") == "vela3d"]
+        """Placeholders whose default was estimated from the cubby reference model."""
+        return [n for n in self.placeholders if self._spec[n].get("basis") == "reference"]
 
     @property
     def placeholders(self) -> List[str]:

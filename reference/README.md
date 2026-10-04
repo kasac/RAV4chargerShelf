@@ -1,25 +1,20 @@
-# Reference models (kept out of the repo)
+# Reference model (kept out of the repo)
 
-Put purchased reference models here. Git ignores everything in this folder except this README.
-**Never commit them.** The Vela3D files are a paid Cults3D download, and their licence does not
-allow redistribution. Only the ~15 numbers of the envelope fitted to them are in the repo
-(`params/reference_vela3d.json`, also the defaults in `params/default.json`), as the brief allows.
+The cubby envelope's defaults were estimated from a reference model of the cubby, called the
+**cubby-constraint-reference-model** in this project. It stands in for a 3D scan of the car's
+cavity, and it is used only to estimate the cavity's size and shape. It is a third-party file
+that may not be redistributed, so git ignores everything in this folder except this README.
+**Never commit it.** Only the ~15 numbers describing the cavity are in the repo:
+`params/cubby_reference_fit.json`, which are also the defaults in `params/default.json`.
 
-Expected file:
-
-| File | What it is |
-|---|---|
-| `TOYOTA_RAV4_TRAY_DRAWER_ORGANIZER_MODULE.stl` | Vela3D "Toyota RAV4 Tray Drawer Organizer": the drawer housing. The comparison uses this one. |
-| `..._LEFT.stl`, `..._RIGHT.stl` | the two drawers (mirror images). Not used. |
-
-With the file in place:
+If you have the file, save it here as `cubby-constraint-reference-model.stl`, then:
 
 ```bash
 python tools/rav4shelf.py reference          # compare + re-fit + out/reference_compare.svg
-python tools/rav4shelf.py reference --write-params params/reference_vela3d.json   # update the fit record
+python tools/rav4shelf.py reference --write-params params/cubby_reference_fit.json   # update the record
 python -m pytest tests/test_reference.py     # the same as unit tests
 ```
 
-The comparison checks the file's bounding box (235.20 × 89.41 × 120.88 mm after un-rotating).
-Another version of the model, or the other dash variant, gets skipped with a message. It would
-need its own `ReferenceSpec` in `src/rav4shelf/reference.py`.
+The tools check the file's bounding box (235.20 × 89.41 × 120.88 mm after undoing its placement).
+A different file is skipped with a message; it would need its own `ReferenceSpec` in
+`src/rav4shelf/reference.py`.

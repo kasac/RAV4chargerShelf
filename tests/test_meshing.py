@@ -136,3 +136,21 @@ def test_profile_gauge_variants(over):
     from conftest import make
     p, d = make(**over)
     assert meshing.check_closed(meshing.profile_gauge_mesh(p, d)) == []
+
+
+def test_envelope_mesh_is_watertight_and_follows_the_model(p, d):
+    m = meshing.envelope_mesh(p, d)
+    assert meshing.check_closed(m) == []
+    (x0, y0, z0), (x1, y1, z1) = m.bbox()
+    assert (y0, z0) == (pytest.approx(0.0), pytest.approx(0.0))
+    assert (y1, z1) == (pytest.approx(p.D_cubby), pytest.approx(p.H_cubby))
+    assert x0 == pytest.approx(-x1)
+    widest = max(params.cubby_half_width(p, 0.0, z) for z in layout.envelope_levels(p))
+    assert x1 == pytest.approx(widest, abs=0.01)
+
+
+@pytest.mark.parametrize("over", [{"wall_radius": 0.0}, {"W_rear_delta": 0.0},
+                                  {"rear_corner_r_side": 0.0, "rear_corner_r_back": 0.0}])
+def test_envelope_mesh_variants(over):
+    p, d = make(**over)
+    assert meshing.check_closed(meshing.envelope_mesh(p, d)) == []

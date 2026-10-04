@@ -101,6 +101,22 @@ def shelf_outline(p: Params, d: Derived, z: float, inset: float = 0.0) -> Outlin
     return outline
 
 
+def cubby_outline(p: Params, z: float) -> Outline:
+    """The cubby itself in plan at height z: the envelope from the front lip
+    (y = 0) to the rear wall, with its rear corners, no gaps and no notch."""
+    from .params import derive
+
+    pc = p.with_overrides({"side_gap": 0.0, "front_recess": 0.0, "rear_gap": 0.0,
+                           "port_notch_width": 0.0, "corner_radius_front": 0.0})
+    return shelf_outline(pc, derive(pc), z)
+
+
+def envelope_levels(p: Params, step: float = 6.0) -> List[float]:
+    """Heights at which the cubby envelope is sampled, floor to flat roof."""
+    n = max(2, int(round(p.H_cubby / step)))
+    return [p.H_cubby * i / n for i in range(n + 1)]
+
+
 # --------------------------------------------------------------------------
 # fit coupon
 # --------------------------------------------------------------------------

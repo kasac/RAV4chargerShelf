@@ -184,7 +184,7 @@ def schedule_slider_bank(component, p, groups):
 
     target = next((prm for prm in component.Params.Input if prm.NickName == SLIDER_INPUT), None)
     if target is None:
-        raise ValueError("the Params component needs an input named '%s'" % SLIDER_INPUT)
+        raise ValueError("the component needs an input named '%s' for the sliders" % SLIDER_INPUT)
     existing = set(src.NickName for src in target.Sources)
     names = [n for n, s in p.spec.items()
              if (not groups or s["group"] in groups) and n not in existing and p[n] is not None]

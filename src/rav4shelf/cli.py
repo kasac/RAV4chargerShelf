@@ -2,9 +2,9 @@
 
     python tools/rav4shelf.py check            # report + sanity checks
     python tools/rav4shelf.py coupon           # test prints: fit coupon + profile gauge
-    python tools/rav4shelf.py preview          # out/overview.svg + out/fit_template_1to1.svg
+    python tools/rav4shelf.py preview          # overview, 1:1 template, cubby_envelope.stl
     python tools/rav4shelf.py all              # everything above
-    python tools/rav4shelf.py reference        # compare with the Vela3D reference model
+    python tools/rav4shelf.py reference        # compare with the cubby reference model
 
 params/measured.json is applied automatically when it exists; add more
 override files with -p. Exit code 1 if a check reports an error.
@@ -80,7 +80,7 @@ def run_reference(p, d, args) -> int:
                   "(includes side_gap and envelope_offset):"]
     lines += ["  " + x for x in cmp_lines]
     values, quality = reference.fit_params(ref)
-    lines += ["", "FITTED ENVELOPE (params/reference_vela3d.json, also the defaults):"]
+    lines += ["", "FITTED ENVELOPE (params/cubby_reference_fit.json, also the defaults):"]
     lines += ["  %-20s %s" % (k, v) for k, v in values.items()]
     lines += ["  " + x for x in reference.envelope_lines(quality)]
     text = "\n".join(lines)
@@ -116,7 +116,8 @@ def main(argv=None) -> int:
     ap.add_argument("-o", "--out", default=os.path.join(params.REPO_ROOT, "out"),
                     help="output folder (default: out/)")
     ap.add_argument("--ref", default=None,
-                    help="reference: STL to compare with (default: reference/*MODULE*.stl)")
+                    help="reference: STL to compare with (default: "
+                         "reference/cubby-constraint-reference-model.stl)")
     ap.add_argument("--write-params", default=None, metavar="FILE",
                     help="reference: also write the fitted parameters to FILE")
     args = ap.parse_args(argv)
@@ -148,6 +149,13 @@ def main(argv=None) -> int:
             path = os.path.join(args.out, name)
             _write(path, svg)
             written.append(path)
+        try:  # the cubby as a solid, to design against in any CAD program
+            env = meshing.envelope_mesh(p, d)
+            path = os.path.join(args.out, "cubby_envelope.stl")
+            fileio.write_stl(path, env.vertices, env.faces, "rav4shelf cubby envelope (car frame)")
+            written.append(path)
+        except GeometryError as exc:
+            print("not writing cubby_envelope.stl: %s" % exc, file=sys.stderr)
 
     if args.command in ("coupon", "all"):
         if checks.has_errors(findings):

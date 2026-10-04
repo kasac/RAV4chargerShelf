@@ -140,6 +140,33 @@ def profile_gauge_mesh(p: Params, d: Derived) -> Mesh:
     return mesh.transformed(lambda v: (v[0] - cx, v[1] - cy, v[2]))
 
 
+def envelope_mesh(p: Params, d: Derived) -> Mesh:
+    """The cubby envelope as a closed solid, floor to flat roof (the roof
+    pocket is left out). A reference body to design against."""
+    from .layout import cubby_outline, envelope_levels
+
+    rings = [[(x, y, z) for x, y in cubby_outline(p, z).ring(p.arc_segments_per_90)]
+             for z in envelope_levels(p)]
+    m = len(rings[0])
+    vertices = [v for ring in rings for v in ring]
+    faces = []
+    for k in range(len(rings) - 1):
+        for j in range(m):
+            a, b = k * m + j, k * m + (j + 1) % m
+            faces += [(a, b, b + m), (a, b + m, a + m)]
+    # caps: the outline is convex, so a fan around its centre closes it
+    for ring, k, flip in ((rings[0], 0, True), (rings[-1], len(rings) - 1, False)):
+        cx = sum(v[0] for v in ring) / m
+        cy = sum(v[1] for v in ring) / m
+        c = len(vertices)
+        vertices.append((cx, cy, ring[0][2]))
+        for j in range(m):
+            a, b = k * m + j, k * m + (j + 1) % m
+            faces.append((c, b, a) if flip else (c, a, b))
+    mesh = Mesh(vertices, faces)
+    return mesh.flipped() if mesh.signed_volume() < 0 else mesh
+
+
 def to_print_orientation(mesh: Mesh) -> Mesh:
     """Rotate 180 deg about x (deck/plate down on the bed), then centre it on
     x/y = 0 with z_min = 0. This is a rotation, not a mirror."""

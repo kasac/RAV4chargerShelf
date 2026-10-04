@@ -16,8 +16,9 @@ OUT = os.path.join(REPO, "docs", "parameters.md")
 
 # phase in which a group is first used by geometry
 USED_BY = {
-    "cubby": "the envelope: fit coupon, profile gauge, shelf (defaults fitted to the Vela3D "
-             "module, see README)", "ports": "checks, previews", "phone": "checks, previews",
+    "cubby": "the envelope: fit coupon, profile gauge, shelf (defaults estimated from the "
+             "cubby reference model, see README)", "ports": "checks, previews",
+    "phone": "checks, previews",
     "fit": "fit coupon, shelf", "strength": "shelf (fit coupon uses frame_height)",
     "perforation": "shelf, drawer (planned)", "drawer": "drawer (planned)",
     "tolerances": "drawer, hinge (planned)", "coupon": "fit coupon, profile gauge",
@@ -42,9 +43,10 @@ def render() -> str:
         "",
         "Generated from `params/default.json` by `python tools/gen_param_docs.py`. Do not edit by hand.",
         "",
-        "**PH** = not confirmed for your car yet (the build report lists them). **V** = the",
-        "default is fitted to the Vela3D module; confirm it with the test prints. Plain **PH** = a",
-        "guess to measure. Range = slider range in Grasshopper; values outside it are rejected.",
+        "**PH** = not confirmed for your car yet (the build report lists them). **R** = the",
+        "default is estimated from the cubby reference model; confirm it with the test prints.",
+        "Plain **PH** = a guess to measure. Range = slider range in Grasshopper; values outside",
+        "it are rejected.",
         "`auto` = derived from other parameters unless you set a value.",
         "",
     ]
@@ -67,7 +69,7 @@ def render() -> str:
                 rng = "%s .. %s" % (_fmt(float(s["min"])), _fmt(float(s["max"])))
             lines.append("| `%s` | %s | %s | %s | %s | %s |" % (
                 name, _fmt(s["value"]), s.get("unit", ""), rng,
-                ("PH V" if s.get("basis") == "vela3d" else "PH") if s.get("placeholder") else "",
+                ("PH R" if s.get("basis") == "reference" else "PH") if s.get("placeholder") else "",
                 s["doc"].replace("|", "/")))
         lines.append("")
     return "\n".join(lines)

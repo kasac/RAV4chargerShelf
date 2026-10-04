@@ -1,9 +1,10 @@
-"""The cubby envelope vs a tested reference design (Vela3D).
+"""The cubby envelope vs the cubby-constraint-reference-model.
 
-The Vela3D STL is a paid download and is not in the repo, so the tests that
-need it skip on CI. Put TOYOTA_RAV4_TRAY_DRAWER_ORGANIZER_MODULE.stl into
-reference/ to run them locally. The machinery (slicing, comparing, fitting)
-is tested on CI with meshes this project generates.
+The reference model is a third-party file and is not in the repo, so the
+tests that need it skip on CI. Put it into reference/ as
+cubby-constraint-reference-model.stl to run them locally. The machinery
+(slicing, comparing, fitting) is tested on CI with meshes this project
+generates.
 """
 import json
 import os
@@ -14,7 +15,7 @@ from rav4shelf import checks, fileio, layout, meshing, params, reference
 
 from conftest import REPO, make
 
-REF_PARAMS = os.path.join(REPO, "params", "reference_vela3d.json")
+REF_PARAMS = os.path.join(REPO, "params", "cubby_reference_fit.json")
 
 
 def own_spec(p, d, rim):
@@ -24,7 +25,7 @@ def own_spec(p, d, rim):
         "own coupon", "*.stl", 0.0, None, x_axis=0, depth_axis=1, depth_sign=1,
         level_axis=2, level_sign=-1, floor_level=d.z_top, front_recess=p.front_recess,
         rear_gap=p.rear_gap, wall_levels=(2.0, rim - 1.0), closed_back_levels=(2.0, rim - 1.0),
-        rear_zone=36.0, wing_end_margin=0.0, roof_depths=None)
+        rear_zone=36.0, side_end_margin=0.0, roof_depths=None)
 
 
 def write_coupon_stl(tmp_path, p, d):
@@ -136,36 +137,37 @@ def test_defaults_are_the_fitted_values():
         fitted = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
     spec = params.load_spec()
     assert {k: spec[k]["value"] for k in fitted} == fitted
-    assert all(spec[k].get("basis") == "vela3d" for k in fitted if k != "z_ref")
+    assert all(spec[k].get("basis") == "reference" for k in fitted if k != "z_ref")
 
 
 # --------------------------------------------------------------------------
-# against the real Vela3D model (skips when the paid file is absent)
+# against the reference model itself (skips when the file is absent)
 # --------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
-def vela3d():
-    path = reference.find_reference_file(reference.VELA3D_MODULE)
+def refmodel():
+    path = reference.find_reference_file(reference.CUBBY_REFERENCE)
     if path is None:
-        pytest.skip("Vela3D MODULE.stl is not in reference/ (paid file, kept out of the repo)")
+        pytest.skip("reference/cubby-constraint-reference-model.stl is not there (third-party "
+                    "file, kept out of the repo)")
     try:
-        return reference.load_reference(reference.VELA3D_MODULE, path)
+        return reference.load_reference(reference.CUBBY_REFERENCE, path)
     except reference.ReferenceError as exc:
         pytest.skip(str(exc))
 
 
-def test_vela3d_file_is_the_analysed_one(vela3d):
-    assert vela3d.width == pytest.approx(235.20, abs=0.05)
-    assert vela3d.depth == pytest.approx(120.88, abs=0.05)
-    prof = vela3d.profile(22.0, reference.frange(5, 110, 5))
+def test_reference_file_is_the_analysed_one(refmodel):
+    assert refmodel.width == pytest.approx(235.20, abs=0.05)
+    assert refmodel.depth == pytest.approx(120.88, abs=0.05)
+    prof = refmodel.profile(22.0, reference.frange(5, 110, 5))
     assert max(abs(lo + hi) for lo, hi in prof) < 0.05  # symmetric about the centreline
 
 
-def test_envelope_matches_vela3d(vela3d):
-    """The default envelope (about 15 numbers) approximates the module's outer
-    surface: side walls from the housing top down to the wing tips, rear
-    corners and roof."""
-    rep = reference.envelope_report(params.load_params(), vela3d)
+def test_envelope_matches_reference_model(refmodel):
+    """The default envelope (about 15 numbers) approximates the reference
+    model's outer surface: side walls over their full height, rear corners
+    and roof."""
+    rep = reference.envelope_report(params.load_params(), refmodel)
     lines = "\n".join(reference.envelope_lines(rep))
     assert rep["walls"]["n"] > 1000 and rep["walls"]["rms"] < 0.2, lines
     assert rep["walls"]["max_abs"] < 1.0, lines
@@ -173,31 +175,31 @@ def test_envelope_matches_vela3d(vela3d):
     assert rep["roof"]["rms"] < 0.15 and rep["roof"]["max_abs"] < 1.0, lines
 
 
-def test_shelf_band_matches_vela3d(vela3d):
-    p = params.load_params()  # side_gap 0, envelope_offset 0: the module's own size
-    c = reference.compare(p, params.derive(p), vela3d)
+def test_shelf_band_matches_reference_model(refmodel):
+    p = params.load_params()  # side_gap 0, envelope_offset 0: the envelope's own size
+    c = reference.compare(p, params.derive(p), refmodel)
     sides = c.stats("sides")
     assert sides["n"] > 300 and sides["max_abs"] < 0.5, "\n".join(c.summary_lines())
 
 
-def test_reference_params_file_is_up_to_date(vela3d):
-    values, _ = reference.fit_params(vela3d)
+def test_reference_params_file_is_up_to_date(refmodel):
+    values, _ = reference.fit_params(refmodel)
     with open(REF_PARAMS, encoding="utf-8") as f:
         stored = {k: v for k, v in json.load(f).items() if not k.startswith("_")}
     assert stored == pytest.approx(values, abs=0.011), \
-        "re-run: python tools/rav4shelf.py reference --write-params params/reference_vela3d.json"
+        "re-run: python tools/rav4shelf.py reference --write-params params/cubby_reference_fit.json"
 
 
-def test_measured_outline_is_close_to_vela3d(vela3d):
+def test_measured_outline_is_close_to_reference_model(refmodel):
     """Guard against gross measuring errors: a shelf built from your
-    measurements should be within 5 mm per side of the tested design."""
+    measurements should be within 5 mm per side of the reference estimate."""
     if not os.path.isfile(params.MEASURED_PATH):
         pytest.skip("no params/measured.json yet")
     p = params.load_params(params.MEASURED_PATH)
-    c = reference.compare(p, params.derive(p), vela3d)
+    c = reference.compare(p, params.derive(p), refmodel)
     s = c.stats("sides")
-    msg = ("your outline differs from the tested Vela3D outline by more than 5 mm per side. "
-           "Check W_ref / wall_lean_deg / W_rear_delta, or your car has the other dash variant.\n"
+    msg = ("your outline differs from the reference estimate by more than 5 mm per side. "
+           "Check W_ref / wall_lean_deg / W_rear_delta, or your car has another dash variant.\n"
            + "\n".join(c.summary_lines()))
     assert -5.0 <= s["max_in"] and s["max_out"] <= 5.0, msg
 
@@ -210,9 +212,9 @@ def test_cli_reference_without_file(tmp_path, capsys):
     assert "not found" in capsys.readouterr().err
 
 
-def test_cli_reference_with_file(vela3d, tmp_path, capsys):
+def test_cli_reference_with_file(refmodel, tmp_path, capsys):
     from rav4shelf import cli
-    rc = cli.main(["reference", "--defaults-only", "--ref", vela3d.path, "-o", str(tmp_path),
+    rc = cli.main(["reference", "--defaults-only", "--ref", refmodel.path, "-o", str(tmp_path),
                    "--write-params", str(tmp_path / "fitted.json")])
     assert rc == 0
     out = capsys.readouterr().out

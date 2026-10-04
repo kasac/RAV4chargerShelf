@@ -184,6 +184,21 @@ def build_profile_gauge(p: Params, d: Derived, tol: float = DEFAULT_TOL):
     return flat, standing, "boolean"
 
 
+def build_envelope(p: Params, d: Derived, tol: float = DEFAULT_TOL) -> rg.Brep:
+    """The cubby envelope as a closed solid from the floor to the flat roof
+    (the roof pocket is left out): a smooth loft through plan sections. A
+    reference body to design against; never exported as a part."""
+    curves = [outline_curve(layout.cubby_outline(p, z), z) for z in layout.envelope_levels(p)]
+    lofts = rg.Brep.CreateFromLoft(_net_list(rg.Curve, curves), rg.Point3d.Unset,
+                                   rg.Point3d.Unset, rg.LoftType.Normal, False)
+    if not lofts:
+        raise BuildError("envelope loft failed")
+    capped = lofts[0].CapPlanarHoles(tol)
+    if capped is None:
+        raise BuildError("capping the envelope failed")
+    return _outward(capped)
+
+
 def build_context(p: Params, d: Derived) -> dict:
     """Reference geometry in the car frame: cubby wireframe, plug cluster,
     phone on the Qi pad. For display only, never exported."""

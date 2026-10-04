@@ -14,6 +14,6 @@
   "phone_width": null,
   "phone_thickness": null,
   "shelf_height": null,
-  "_after_the_test_prints": "The cubby shape defaults to the fit to the Vela3D module. Set envelope_offset to the gap you saw per side on the fit coupon; override other cubby values only if a test print showed they differ (docs/measuring.md, step 3).",
+  "_after_the_test_prints": "The cubby shape defaults to the estimate from the cubby-constraint-reference-model. Set envelope_offset to the gap you saw per side on the fit coupon; override other cubby values only if a test print showed they differ (docs/measuring.md, step 3).",
   "envelope_offset": 0.0
 }

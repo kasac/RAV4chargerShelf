@@ -15,6 +15,6 @@ dist/
 *.rhl
 *.ghbak
 
-# reference models (paid downloads, never commit them): only the README is tracked
+# third-party reference model (not redistributable, never commit it): only the README is tracked
 reference/*
 !reference/README.md

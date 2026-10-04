@@ -1,9 +1,9 @@
 # Fitting the shelf to your car
 
-The cubby shape doesn't need to be measured any more. Its defaults are **fitted to the Vela3D
-module**, a tested design whose outer surface appears to follow a 3D scan of the cubby (see
-README → Reference comparison). Two quick test prints check that shape in *your* car. You only
-need to measure the plugs, the phone and anything a test print shows to be different.
+The cubby shape doesn't need to be measured any more. Its defaults are **estimated from the
+cubby-constraint-reference-model**, a reference model of the cavity that stands in for a 3D scan
+(see README → Cubby reference model). Two quick test prints check that shape in *your* car. You
+only need to measure the plugs, the phone and anything a test print shows to be different.
 
 Allow about an hour of printing and 15 minutes in the car.
 
@@ -50,7 +50,7 @@ SIDE (section through the plugs, lip on the left)
 
 ## The cubby envelope (fitted, about 15 numbers)
 
-These values describe the cubby. They were fitted to the outer surface of the Vela3D module:
+These values describe the cubby. They were fitted to the outer surface of the reference model:
 side walls RMS 0.14 mm, rear corners within ±0.5 mm, roof RMS 0.09 mm.
 
 | Parameter | What it describes |
@@ -65,13 +65,12 @@ side walls RMS 0.14 mm, rear corners within ±0.5 mm, roof RMS 0.09 mm.
 | `roof_pocket_width`, `roof_pocket_blend`, `roof_pocket_rise`, `roof_pocket_end`, `roof_pocket_shape` | the roof is higher over the middle 136 mm toward the front (by `roof_pocket_rise` near the lip, flattening out at `roof_pocket_end`) |
 | `W_lip` | opening width at the lip (only used to check that the shelf goes in) |
 
-Three things the file can't tell, so they're assumptions:
-- **Foam allowance.** Vela3D mounts its module with foam, so your walls are some unknown distance
-  outside this envelope. That distance is `envelope_offset`, and the fit coupon measures it.
-- **Floor height.** The floor is assumed to be where the module's side wings end. That's the
-  highest it can be (the module has to fit), so the profile gauge can only show a gap under it,
-  never jam.
-- **Fore-aft position.** The module's front is assumed to sit 8 mm behind the lip.
+Three things the reference model can't tell, so they're assumptions:
+- **Clearance.** Its surface may sit some unknown distance inside your walls. That distance is
+  `envelope_offset`, and the fit coupon measures it.
+- **Floor height.** The floor is assumed to be at the model's lowest points. That's the highest
+  it can be (the model has to fit), so the profile gauge can only show a gap under it, never jam.
+- **Fore-aft position.** The model's front is assumed to sit 8 mm behind the lip.
 
 ## Step 1 – print the two test prints
 
@@ -86,8 +85,8 @@ python tools/rav4shelf.py coupon      # out/fit_coupon.* and out/profile_gauge.*
   walls, the floor and the roof pocket at once. Print it flat.
 
 Use PETG for both, like the real shelf, so the shrinkage matches. With `side_gap` 0 and
-`envelope_offset` 0 (the defaults), the coupon is exactly the size of the Vela3D module at that
-height.
+`envelope_offset` 0 (the defaults), the coupon is exactly the size of the fitted envelope at
+that height.
 
 Optional, before printing anything: `python tools/rav4shelf.py preview` writes a 1:1 paper template
 (`out/fit_template_1to1.svg`). Print it at 100 % and check that the 50 mm bar measures 50 mm.
@@ -118,7 +117,7 @@ Put any changes in `params/measured.json`, then reprint the part that was off.
 
 | What you saw | Change |
 |---|---|
-| The same gap `g` per side on the coupon and the gauge | `envelope_offset` = `g`. Then choose `side_gap`: 0 for a snug fit, the pad thickness for felt or foam (like Vela3D), or slightly negative for a press fit. |
+| The same gap `g` per side on the coupon and the gauge | `envelope_offset` = `g`. Then choose `side_gap`: 0 for a snug fit, the pad thickness for felt or foam, or slightly negative for a press fit. |
 | Gap bigger at the front than at the rear (or the other way round) | `W_rear_delta` |
 | Gauge: the gap changes from top to bottom along the side | `wall_lean_deg` (and `wall_radius` if it changes unevenly) |
 | Gauge: gap `h` under its bottom edge | the floor is lower than assumed: add `h` to `z_ref`, `H_cubby` and the `shelf_height` you want |
@@ -145,8 +144,8 @@ These are still guesses. They decide the shelf height and the port notch.
 | `phone_length`, `phone_width`, `phone_thickness` | Your phone **in its case**, including the camera bump. The model assumes the phone lies crosswise (long side along x). |
 
 **Shelf height.** `shelf_height` is the height of the shelf's top surface above the Qi pad. The
-shelf's edge band reaches `frame_height` (8 mm) below it. The default, 58 mm, is about where the
-Vela3D drawers sit.
+shelf's edge band reaches `frame_height` (8 mm) below it. The default, 58 mm, leaves about 20 mm
+above it for a drawer and 50 mm below it for the phone and plugs.
 - Plugs pass under the shelf if `shelf_height >= H_ports_top + port_clearance + frame_height`.
 - Otherwise they poke up through the rear notch. The checks tell you whether the notch clears them.
 - The phone needs `phone_clearance_min` (20 mm) under the lowest part of the shelf.
@@ -165,9 +164,9 @@ same height and subtract `W_ref`. For the rear corners, press card into a corner
 Measure each value three times and take the median. For widths, take the smallest reading: trim
 panels bulge, and they flex if you push.
 
-If you have the Vela3D model in `reference/`, `python tools/rav4shelf.py reference` compares your
-numbers with the tested design. A difference of more than about 5 mm per side usually means a
-wrong measurement, or that your car has the other dash variant.
+If you have the reference model in `reference/`, `python tools/rav4shelf.py reference` compares
+your numbers with its estimate. A difference of more than about 5 mm per side usually means a
+wrong measurement, or that your car has another dash variant.
 
 ## Reporting back
 

@@ -1,28 +1,19 @@
-"""Approximate a reference model's outer shape with our cubby envelope, and
+"""Estimate the cubby envelope from a reference model of the cavity, and
 compare the two. Pure Python (no Rhino, no numpy).
 
-Reference: the Vela3D "Toyota RAV4 Tray Drawer Organizer" (Cults3D, a paid
-download, tested in the car; its outer surface looks like it follows a 3D
-scan of the cubby). Its STL files are NOT part of this repository (licence).
-Put them in reference/, which is git-ignored. Only a handful of numbers are
-derived from them: our envelope is a small parametric model (see
-params.cubby_half_width, params.roof_height, layout.shelf_outline), not a
-copy of their mesh.
+The cubby-constraint-reference-model is a third-party 3D model that fills the
+cubby closely; it stands in for a 3D scan of the car's cavity. It is used only
+to estimate the cavity's size and shape: our envelope is a small parametric
+model (params.cubby_half_width, params.roof_height, layout.shelf_outline)
+fitted to its outer surface. The file itself is not part of this repository
+and may not be redistributed: put it in reference/ (git-ignored) as
+cubby-constraint-reference-model.stl.
 
-How MODULE.stl was read (from sections of the file, see README):
-* It is the drawer housing, printed standing and rotated 135 deg about z on
-  the bed. Un-rotated, print x = car width, print z = car depth (max z is the
-  front, where the drawers come out) and print y points DOWN in the car: the
-  drawers slide on the plate at print y 29..36 (their side ribs run in grooves
-  parallel to it), the top plate is at print y 0..12 and the side wings reach
-  down to print y 89.
-* Its outer sides press against the cubby walls through foam pads, so its
-  outline is the cubby minus their (unknown) foam allowance: envelope_offset.
-
-Frame used here: x centred on the part, depth measured from the part's front
-into the dash, level measured DOWN in the file's print coordinates. Car
-coordinates follow from the spec's assumptions: y = front_recess + depth,
-z = floor_level - level.
+Frame used here: x centred on the model, depth measured from its front into
+the dash, level measured DOWN in the file's own coordinates (after undoing the
+file's placement, see ReferenceSpec). Car coordinates follow from the spec's
+assumptions: y = front_recess + depth, z = floor_level - level. Its surface may
+sit a little inside the real walls; that unknown clearance is envelope_offset.
 """
 from __future__ import annotations
 
@@ -56,20 +47,20 @@ class ReferenceSpec:
     x_axis             axis (0, 1, 2) that becomes x (car width)
     depth_axis/sign    axis that becomes depth; sign -1 = the front is at the axis maximum
     level_axis/sign    axis that becomes level; sign +1 = level grows with the axis
-    floor_level        level of the Qi pad                          (ASSUMPTION)
-    front_recess       the part's front is this far behind the lip  (ASSUMPTION)
+    floor_level        level of the Qi pad                           (ASSUMPTION)
+    front_recess       the model's front is this far behind the lip  (ASSUMPTION)
     rear_gap           its back is this far in front of the rear wall (ASSUMPTION)
     wall_levels        (min, max) levels where its sides follow the cubby walls
     closed_back_levels (min, max) levels where it has a back face (rear corners)
     rear_zone          the last rear_zone mm of depth are the rear corners
-    wing_end_margin    ignore this much before the side data ends (cut wing edges)
+    side_end_margin    ignore this much before its side surfaces end
     roof_depths        (min, max) depth range of its top surface to fit the roof to;
                        None = it says nothing about the roof
     """
 
     def __init__(self, name, file_glob, rotate_z_deg, extents, x_axis, depth_axis, depth_sign,
                  level_axis, level_sign, floor_level, front_recess, rear_gap, wall_levels,
-                 closed_back_levels, rear_zone, wing_end_margin, roof_depths):
+                 closed_back_levels, rear_zone, side_end_margin, roof_depths):
         self.name = name
         self.file_glob = file_glob
         self.rotate_z_deg = rotate_z_deg
@@ -85,28 +76,28 @@ class ReferenceSpec:
         self.wall_levels = wall_levels
         self.closed_back_levels = closed_back_levels
         self.rear_zone = rear_zone
-        self.wing_end_margin = wing_end_margin
+        self.side_end_margin = side_end_margin
         self.roof_depths = roof_depths
 
 
-VELA3D_MODULE = ReferenceSpec(
-    name="Vela3D Toyota RAV4 Tray Drawer Organizer, MODULE.stl (drawer housing)",
-    file_glob="*TRAY_DRAWER_ORGANIZER_MODULE*.stl",
+CUBBY_REFERENCE = ReferenceSpec(
+    name="cubby-constraint-reference-model",
+    file_glob="cubby-constraint-reference-model*.stl",
     rotate_z_deg=-135.0,
     extents=(235.20, 89.41, 120.88),
     x_axis=0, depth_axis=2, depth_sign=-1, level_axis=1, level_sign=1,
-    floor_level=89.41,         # ASSUMPTION: the wing tips reach the floor
+    floor_level=89.41,         # ASSUMPTION: its lowest points reach the floor
     front_recess=8.0,          # ASSUMPTION
     rear_gap=1.0,              # ASSUMPTION
-    wall_levels=(16.0, 86.0),  # above 16 the housing's top edge is rounded
+    wall_levels=(16.0, 86.0),  # above 16 its top edge is rounded
     closed_back_levels=(16.0, 28.0),
     rear_zone=36.0,            # the sides are straight up to 85 mm behind the front
-    wing_end_margin=15.0,
+    side_end_margin=15.0,
     roof_depths=(4.0, 115.0),
 )
 
 
-def find_reference_file(spec: ReferenceSpec = VELA3D_MODULE, folder: str = REFERENCE_DIR):
+def find_reference_file(spec: ReferenceSpec = CUBBY_REFERENCE, folder: str = REFERENCE_DIR):
     """Path of the reference STL in ``folder``, or None."""
     hits = sorted(glob.glob(os.path.join(folder, spec.file_glob)))
     return hits[0] if hits else None
@@ -225,7 +216,7 @@ class PlacedReference:
         return self.spec.floor_level - level
 
 
-def load_reference(spec: ReferenceSpec = VELA3D_MODULE, path: str = None) -> PlacedReference:
+def load_reference(spec: ReferenceSpec = CUBBY_REFERENCE, path: str = None) -> PlacedReference:
     path = path or find_reference_file(spec)
     if not path or not os.path.isfile(path):
         raise ReferenceError("reference STL not found: put %s into %s" % (spec.file_glob, REFERENCE_DIR))
@@ -238,7 +229,7 @@ def load_reference(spec: ReferenceSpec = VELA3D_MODULE, path: str = None) -> Pla
 
 def wall_samples(ref: PlacedReference, level_step: float = 2.0, depth_step: float = 2.0):
     """(y, z, half-width) on the side walls, outside the rear corners and away
-    from the cut ends of the wings."""
+    from the ends of its side surfaces."""
     spec = ref.spec
     depths = frange(0.5, ref.depth - 0.5, depth_step)
     rear_start = ref.depth - spec.rear_zone
@@ -248,7 +239,7 @@ def wall_samples(ref: PlacedReference, level_step: float = 2.0, depth_step: floa
         have = [dd for dd, pr in zip(depths, prof) if pr]
         if not have:
             continue
-        last = min(rear_start, max(have) - spec.wing_end_margin)
+        last = min(rear_start, max(have) - spec.side_end_margin)
         for dd, pr in zip(depths, prof):
             if pr and dd <= last:
                 out.append((ref.to_y(dd), ref.to_z(level), (pr[1] - pr[0]) / 2.0))
@@ -579,7 +570,7 @@ def compare(p: Params, d: Derived, ref: PlacedReference, step: float = 0.5) -> C
         ours = extents_profile(ring_segments(layout.shelf_outline(p, d, z).ring(32), shift), depths)
         theirs = ref.profile(level, depths)
         have = [dd for dd, pr in zip(depths, theirs) if pr]
-        last = max(have) - spec.wing_end_margin if have else 0.0
+        last = max(have) - spec.side_end_margin if have else 0.0
         for dep, o, r in zip(depths, ours, theirs):
             if o is None or r is None:
                 continue
@@ -599,19 +590,19 @@ def write_params_file(path: str, values: dict, quality: dict, ref: PlacedReferen
     spec = ref.spec
     w, c, r = quality["walls"], quality["rear_corners"], quality["roof"]
     doc = {
-        "_source": ("Fitted to the outer surface of %s by 'python tools/rav4shelf.py reference "
-                    "--write-params'. The STL is not in the repo (paid); only these numbers are "
-                    "derived from it. The same values are the defaults in params/default.json."
-                    % spec.name),
+        "_source": ("Estimated from the %s (a stand-in for a 3D scan of the cubby) by "
+                    "'python tools/rav4shelf.py reference --write-params'. That file is not in the "
+                    "repo; only these numbers describing the cavity are. The same values are the "
+                    "defaults in params/default.json." % spec.name),
         "_model": ("Side walls: one circular arc seen from the front (wall_radius, wall_lean_deg at "
                    "z_ref) moved along the depth with a linear taper (W_rear_delta). Rear corners: "
                    "chamfer + two fillets. Roof: flat at H_cubby with a pocket in the middle that "
                    "rises toward the front."),
-        "_assumptions": ("Not in the file, assumed: its wing tips reach the Qi pad, its front is "
-                         "%.0f mm behind the lip, its back %.0f mm from the rear wall. The car's "
-                         "walls are outside this envelope by Vela3D's foam allowance (unknown): "
-                         "set envelope_offset from the fit coupon." % (spec.front_recess,
-                                                                       spec.rear_gap)),
+        "_assumptions": ("Not in the file, assumed: its lowest points reach the Qi pad, its front "
+                         "is %.0f mm behind the lip, its back %.0f mm from the rear wall. The car's "
+                         "walls may be a little outside this envelope (unknown clearance): set "
+                         "envelope_offset from the fit coupon." % (spec.front_recess,
+                                                                   spec.rear_gap)),
         "_fit": ("side walls rms %.2f / max %.2f mm (%d points), rear corners max %.2f mm, roof "
                  "rms %.2f / max %.2f mm" % (w["rms"], w["max_abs"], w["n"], c["max_abs"],
                                              r["rms"], r["max_abs"])),

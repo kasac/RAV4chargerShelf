@@ -113,6 +113,15 @@ def test_build_profile_gauge(fake):
     fake.rg.Transform.Rotation.assert_called_once()     # stood up into the car frame
 
 
+def test_build_envelope(fake):
+    from rav4shelf import geometry, layout
+    _setup_booleans(fake.rg)
+    p = params.load_params()
+    geometry.build_envelope(p, params.derive(p))
+    curves = fake.rg.Brep.CreateFromLoft.call_args.args[0]
+    assert curves.Add.call_count == len(layout.envelope_levels(p))  # one section per level
+
+
 def test_profile_gauge_component(fake):
     from rav4shelf import gh
     _setup_booleans(fake.rg)

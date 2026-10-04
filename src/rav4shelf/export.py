@@ -29,9 +29,13 @@ LAYER_COLORS = {
     "shelf": (47, 109, 181),
     "drawer": (230, 126, 34),
     "cubby": (120, 120, 120),
+    "envelope": (170, 170, 170),
     "ports": (192, 57, 43),
     "phone": (127, 140, 141),
 }
+
+# Created switched off: the envelope solid would hide the parts inside it.
+HIDDEN_AT_FIRST = {"envelope"}
 
 
 # --------------------------------------------------------------------------
@@ -61,6 +65,8 @@ def ensure_layer(doc, name: str) -> int:
         rgb = LAYER_COLORS.get(name)
         if rgb:
             layer.Color = System.Drawing.Color.FromArgb(*rgb)
+        if name in HIDDEN_AT_FIRST:
+            layer.IsVisible = False
         idx = doc.Layers.Add(layer)
     return idx
 
