@@ -6,6 +6,7 @@ embedded package and spec), and run its main() against mocked Rhino, System
 and Grasshopper modules, once as a Rhino script and once as a Grasshopper
 Script component.
 """
+import ast
 import importlib.util
 import os
 import subprocess
@@ -41,27 +42,6 @@ def _run(code, tmp_path):
                          capture_output=True, text=True, timeout=120)
     assert out.returncode == 0, out.stdout + out.stderr
     return out.stdout
-
-
-def test_bundle_runs_without_the_repo(tmp_path):
-    out = _run("""
-        import os, runpy, sys
-        g = runpy.run_path(BUNDLE, run_name="not_main")  # loads, does not build
-        g["_install"]()
-        import rav4shelf
-        from rav4shelf import checks, meshing, params
-        assert rav4shelf.__file__.startswith("<rav4shelf_rhino.py>"), rav4shelf.__file__
-        assert not os.path.isfile(params.DEFAULT_SPEC_PATH)  # spec comes from the bundle
-        p = params.load_params({"envelope_offset": 0.5})
-        d = params.derive(p)
-        assert not checks.has_errors(checks.run_checks(p, d))
-        assert meshing.check_closed(meshing.coupon_mesh(p, d)) == []
-        assert meshing.check_closed(meshing.envelope_mesh(p, d)) == []
-        g["_install"]()  # second run (Rhino keeps modules): same package kept
-        assert sys.modules["rav4shelf"] is rav4shelf
-        print("W_ref", p.W_ref)
-        """, tmp_path)
-    assert "W_ref 231.55" in out
 
 
 MOCKS = """
@@ -100,6 +80,92 @@ MOCKS = """
     rg.PolyCurve.return_value.Append.return_value = True
     rg.PolyCurve.return_value.IsClosed = True
 """
+
+
+def test_bundle_runs_without_the_repo(tmp_path):
+    out = _run(MOCKS + """
+    import os
+    g = runpy.run_path(BUNDLE, run_name="not_main")  # loads, does not build
+    g["_install"]()
+    import rav4shelf
+    from rav4shelf import checks, meshing, params
+    assert rav4shelf.__file__.startswith("<rav4shelf_rhino.py>"), rav4shelf.__file__
+    assert not os.path.isfile(params.DEFAULT_SPEC_PATH)  # spec comes from the bundle
+    p = params.load_params({"envelope_offset": 0.5})
+    d = params.derive(p)
+    assert not checks.has_errors(checks.run_checks(p, d))
+    assert meshing.check_closed(meshing.coupon_mesh(p, d)) == []
+    assert meshing.check_closed(meshing.envelope_mesh(p, d)) == []
+    g["_install"]()  # second run (Rhino keeps modules): same package kept
+    assert sys.modules["rav4shelf"] is rav4shelf
+    print("W_ref", p.W_ref)
+    """, tmp_path)
+    assert "W_ref 231.55" in out
+
+
+def test_bundle_stops_with_a_clear_message_in_python2(tmp_path):
+    """Rhino's old IronPython 2 engine (EditPythonScript, the GhPython
+    component) must get an explanation, not a confusing import error."""
+    script = tmp_path / "run.py"
+    script.write_text(textwrap.dedent("""
+        import sys
+        sys.version_info = (2, 7, 12, "final", 0)  # what IronPython reports
+        source = open(%r, encoding="utf-8").read()
+        exec(compile(source, "bundle", "exec"), {"__name__": "__main__"})
+        """ % BUNDLE), encoding="utf-8")
+    out = subprocess.run([sys.executable, "-I", str(script)], capture_output=True, text=True,
+                         timeout=60)
+    assert out.returncode != 0
+    assert "RuntimeError: This script needs Python 3" in out.stderr
+    assert "ScriptEditor" in out.stderr and "Python 3 Script" in out.stderr
+
+
+def _python3_only(tree):
+    """Constructs IronPython 2.7 cannot compile, outside string literals (the
+    embedded sources are strings, so they are not looked at)."""
+    found = []
+    for node in ast.walk(tree):
+        kind = type(node).__name__
+        if kind in ("JoinedStr", "AnnAssign", "Nonlocal", "YieldFrom", "Await", "NamedExpr",
+                    "AsyncFunctionDef", "AsyncFor", "AsyncWith", "MatMult"):
+            found.append(kind)
+        elif isinstance(node, (ast.FunctionDef, ast.Lambda)):
+            a = node.args
+            if a.kwonlyargs or a.posonlyargs or any(x.annotation for x in a.args):
+                found.append("argument syntax in %s" % getattr(node, "name", "lambda"))
+            if getattr(node, "returns", None):
+                found.append("return annotation on %s" % node.name)
+        elif isinstance(node, ast.Raise) and node.cause:
+            found.append("raise ... from")
+        elif isinstance(node, (ast.Assign, ast.For)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(isinstance(n, ast.Starred) for t in targets for n in ast.walk(t)):
+                found.append("starred assignment")
+        elif isinstance(node, ast.Dict) and None in node.keys:
+            found.append("{**dict}")
+        elif isinstance(node, ast.ClassDef) and node.keywords:
+            found.append("class keywords on %s" % node.name)
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+              and node.func.id == "print" and node.keywords):
+            found.append("print(..., keyword=)")
+    return found
+
+
+def test_bundle_is_python2_syntax_outside_the_embedded_sources():
+    """IronPython compiles the whole file before it runs the version check,
+    so the code around the embedded sources must be valid Python 2 too."""
+    with open(BUNDLE, encoding="utf-8") as f:
+        tree = ast.parse(f.read())
+    assert _python3_only(tree) == []
+    # the check itself works
+    assert _python3_only(ast.parse("def f(a: int, *, b=1) -> None: print(f'{a}', end='')"))
+
+
+def test_loader_does_not_need_importlib():
+    assert "importlib" not in _generator().LOADER
+
+
+
 
 
 def test_bundle_main_in_rhino(tmp_path):

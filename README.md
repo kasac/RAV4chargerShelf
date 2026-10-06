@@ -67,18 +67,25 @@ need the rest of the repo.
 1. On GitHub, open `rhino/rav4shelf_rhino.py` and click **Copy raw file** (the two-squares icon
    above the code). Or download it.
 2. In Rhino 8, make sure the units are **millimetres** (`Units` command).
-3. Type `ScriptEditor`, make a new Python 3 script (or **File → Open** the downloaded file), paste,
-   and press **Run** (F5).
+3. Type `ScriptEditor` and press Enter. Either **File → Open** the downloaded file, or make a new
+   script, choose **Python 3** as its language, and paste. Press **Run** (F5).
+
+It is a **Python 3** script. Don't use `EditPythonScript`: that is Rhino's old IronPython 2 editor,
+which stops with "This script needs Python 3" (older copies of the file failed with "cannot import
+abc from importlib"). `RunPythonScript` works with the saved file, because its first line,
+`#! python3`, selects Python 3.
 
 The fit coupon, the profile gauge, the cubby wireframe, the plugs, the phone and the LED free zone
-appear on layers `RAV4chargerShelf::<part>`, and a report prints in the output pane. The `envelope` layer (the cubby
-as a solid) starts switched off; turn it on in X-Ray display mode to see the parts inside it.
+appear on layers `RAV4chargerShelf::<part>`, and a report prints in the output pane. The
+`envelope` layer (the cubby as a solid) starts switched off; turn it on in X-Ray display mode to
+see the parts inside it.
 
 Change your values in the **SETTINGS** block at the top of the file (`MY_VALUES`), then run again.
 Set `EXPORT_FOLDER` to also write STL, 3MF and STEP files in print orientation. To update, replace
 the whole file and copy your SETTINGS over.
 
-The same file also works in a Grasshopper **Python 3 Script** component, with live sliders: see
+The same file also works in a Grasshopper **Python 3 Script** component (not the old "Python
+Script" component, which is IronPython 2), with live sliders: see
 [docs/grasshopper_onboarding.md](docs/grasshopper_onboarding.md).
 
 ## The cubby envelope

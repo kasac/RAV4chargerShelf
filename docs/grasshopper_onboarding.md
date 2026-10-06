@@ -82,7 +82,9 @@ lines); that's expected, because the whole project is inside.
 
 ### 2.2 Place and wire the Script component
 
-1. Double-click the canvas, type `Python 3 Script`, press Enter.
+1. Double-click the canvas, type `Python 3 Script`, press Enter. Take exactly this one: the
+   similar **Python Script** and **IronPython 2 Script** components run the old Python 2, which
+   can't run this file.
 2. Zoom in on the component until small **⊕ / ⊖** icons appear next to its inputs and outputs. Use
    them to add and remove parameters.
 3. **Inputs:** keep one input and remove the rest. Right-click it, rename it to **`S`**, and set it
@@ -173,6 +175,7 @@ Started with Grasshopper" videos.
 | Symptom | Fix |
 |---|---|
 | The component is red | Click its balloon, or read the `out` output. Report the message. |
+| "This script needs Python 3", or "cannot import abc from importlib" | The file is running in IronPython 2: use a **Python 3 Script** component (2.2, step 1). In Rhino itself, use `ScriptEditor`, not `EditPythonScript`. |
 | The parts appear many times, or the report repeats | Input `S` is on Item Access: right-click it → **List Access**. The report says so too. |
 | A slider has no effect | Its name must be the parameter name exactly (case matters). Mistyped names are listed as "ignored" in the report. |
 | "document units are … not millimetres" | Run `Units` in Rhino and pick Millimeters. |

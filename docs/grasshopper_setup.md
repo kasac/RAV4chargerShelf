@@ -41,7 +41,7 @@ repo folder and restart Rhino.
 ## 2. How to make a wrapper component (repeat for each)
 
 1. Place a **Python 3 Script** component (Maths tab → Script panel, or double-click the canvas and
-   type `Python 3 Script`).
+   type `Python 3 Script`). Not "Python Script" or "IronPython 2 Script": those run Python 2.
 2. Zoom in until the **⊕ / ⊖** icons appear on the component, and add or remove inputs and outputs
    until they match the list below. Right-click each parameter to **rename** it, and to set its
    **type hint** and **access** where the list says so.
