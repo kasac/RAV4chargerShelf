@@ -2,7 +2,7 @@
 # RAV4chargerShelf GH component: Cubby context (display only, never exported)
 # Paste into a Rhino 8 "Script" component set to Python 3.
 #   Inputs : P  (from the Params component)
-#   Outputs: cubby (wireframe), ports (plug cluster box), phone (phone box)
+#   Outputs: cubby (wireframe + LED free zone), ports (plug cluster box), phone (phone box)
 # ---- bootstrap (identical in every wrapper) -------------------------------
 import os
 import sys

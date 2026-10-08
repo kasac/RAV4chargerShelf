@@ -2,25 +2,24 @@
 
 Generated from `params/default.json` by `python tools/gen_param_docs.py`. Do not edit by hand.
 
-**PH** = not confirmed for your car yet (the build report lists them). **R** = the
-default is estimated from the cubby reference model; confirm it with the test prints.
-Plain **PH** = a guess to measure. Range = slider range in Grasshopper; values outside
-it are rejected.
+**PH** = not confirmed for your car yet. **PH R** = an estimate for the test prints to
+confirm; plain **PH** = a guess to measure. Range = slider range in Grasshopper; values
+outside it are rejected.
 `auto` = derived from other parameters unless you set a value.
 
 ## cubby
 
-Used by: the envelope: fit coupon, profile gauge, shelf (defaults estimated from the cubby reference model, see README)
+Used by: the cubby model: fit coupon, profile gauge, all parts
 
 | Name | Default | Unit | Range / choices | PH | Meaning |
 |---|---|---|---|---|---|
-| `W_ref` | 231.55 | mm | 80 .. 350 | PH R | Cubby width 10 mm behind the front lip, at height z_ref. Default: estimated from the cubby-constraint-reference-model (its clearance to the real walls is not included, see envelope_offset). |
+| `W_ref` | 231.55 | mm | 80 .. 350 | PH R | Cubby width 10 mm behind the front lip, at height z_ref. Estimate; see envelope_offset. |
 | `z_ref` | 55 | mm | 0 .. 200 |  | Height above the Qi pad at which W_ref and wall_lean_deg are given. If you measure, measure there. |
 | `wall_lean_deg` | 6.84 | deg | -30 .. 30 | PH R | Lean of each side wall at z_ref, seen from the front. Positive = the cubby gets wider going up. |
 | `wall_radius` | 504.98 | mm | 0 .. 5000 | PH R | Radius of the side walls seen from the front: they curve in toward the floor. 0 = straight walls. |
 | `W_rear_delta` | -9.44 | mm | -40 .. 40 | PH R | Width 10 mm in front of the rear wall minus width 10 mm behind the lip, at the same height. Negative = the cubby narrows toward the rear. |
-| `D_cubby` | 129.88 | mm | 40 .. 300 | PH R | Depth from the front lip to the rear wall, above the plugs. Default: depth of the reference model + front_recess + rear_gap (its position behind the lip is assumed). |
-| `H_cubby` | 77.85 | mm | 20 .. 200 | PH R | Height of the flat part of the roof above the Qi pad. Default: top of the reference model, assuming its lowest points reach the floor. |
+| `D_cubby` | 129.88 | mm | 40 .. 300 | PH R | Depth from the front lip to the rear wall, above the plugs. Estimate. |
+| `H_cubby` | 77.85 | mm | 20 .. 200 | PH R | Height of the flat part of the roof above the Qi pad. Estimate; the profile gauge checks it. |
 | `rear_corner_length` | 22.3 | mm | 0 .. 100 | PH R | Rear corners seen from above: a chamfer that starts this far in front of the rear wall on the side wall ... (0 = plain corner rounded with rear_corner_r_back). |
 | `rear_corner_inset` | 4.84 | mm | 0 .. 50 | PH R | ... and ends this far in from the side wall on the rear wall. |
 | `rear_corner_r_side` | 67.33 | mm | 0 .. 300 | PH R | Fillet radius where the rear-corner chamfer meets the side wall. |
@@ -34,7 +33,7 @@ Used by: the envelope: fit coupon, profile gauge, shelf (defaults estimated from
 | `led_y` | 65 | mm | 0 .. 300 | PH | Distance from the front lip to the centre of the roof LED. Guess: the middle of the cubby. |
 | `roof_bulge_depth` | 3 | mm | 0 .. 30 | PH | The roof bulges down slightly in the middle, with the LED at its centre: how far its lowest point is below H_cubby. 0 = flat roof. Guess. |
 | `roof_bulge_diameter` | 60 | mm | 0 .. 250 | PH | Diameter of the roof bulge, modelled as a smooth round bump centred on the LED. Guess. |
-| `W_lip` | 236 | mm | 60 .. 350 | PH R | Narrowest width of the opening at the front lip, at shelf height. Only used to check that the shelf can be inserted flat. Default: the reference model (235.2 wide) goes in. |
+| `W_lip` | 236 | mm | 60 .. 350 | PH R | Narrowest width of the opening at the front lip, at shelf height. Only used to check that the shelf can be inserted flat. Estimate. |
 
 ## ports
 
@@ -70,7 +69,7 @@ Used by: fit coupon, shelf
 | `front_recess` | 8 | mm | 0 .. 60 |  | How far the shelf's front edge sits behind the front lip (hides the shelf, looks closer to stock). |
 | `rear_gap` | 1 | mm | 0 .. 20 |  | Gap between the shelf's rear edge and the rear wall. |
 | `side_gap` | 0 | mm | -3 .. 5 |  | Gap per side between the shelf edge and the side wall (see envelope_offset). 0 = exactly the size of the fitted envelope at that height. Negative = bigger (press fit). Use the pad thickness if you add felt/foam. |
-| `envelope_offset` | 0 | mm | -5 .. 10 |  | How far your car's side walls are outside the fitted envelope (the reference model's clearance to the real walls is unknown). Read it off the fit coupon: the gap you see per side when side_gap is 0. |
+| `envelope_offset` | 0 | mm | -5 .. 10 |  | How far your car's side walls are outside the estimated envelope. Read it off the fit coupon: the gap you see per side when side_gap is 0. |
 | `corner_radius_front` | 4 | mm | 0 .. 30 |  | Corner radius of the shelf's front corners (cosmetic). |
 | `port_notch_width` | 76 | mm | 0 .. 250 |  | Width of the cut-out in the shelf's rear edge over the port cluster. 0 disables the notch. |
 | `port_notch_depth` | 50 | mm | 0 .. 200 |  | How far the notch reaches forward into the shelf, from its rear edge. (The brief's port_notch_height: the notch is a through-cut, so it has a depth, not a height.) |

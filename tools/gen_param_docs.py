@@ -16,8 +16,7 @@ OUT = os.path.join(REPO, "docs", "parameters.md")
 
 # phase in which a group is first used by geometry
 USED_BY = {
-    "cubby": "the envelope: fit coupon, profile gauge, shelf (defaults estimated from the "
-             "cubby reference model, see README)", "ports": "checks, previews",
+    "cubby": "the cubby model: fit coupon, profile gauge, all parts", "ports": "checks, previews",
     "phone": "checks, previews",
     "fit": "fit coupon, shelf", "strength": "shelf (fit coupon uses frame_height)",
     "perforation": "shelf, drawer (planned)", "drawer": "drawer (planned)",
@@ -43,10 +42,9 @@ def render() -> str:
         "",
         "Generated from `params/default.json` by `python tools/gen_param_docs.py`. Do not edit by hand.",
         "",
-        "**PH** = not confirmed for your car yet (the build report lists them). **R** = the",
-        "default is estimated from the cubby reference model; confirm it with the test prints.",
-        "Plain **PH** = a guess to measure. Range = slider range in Grasshopper; values outside",
-        "it are rejected.",
+        "**PH** = not confirmed for your car yet. **PH R** = an estimate for the test prints to",
+        "confirm; plain **PH** = a guess to measure. Range = slider range in Grasshopper; values",
+        "outside it are rejected.",
         "`auto` = derived from other parameters unless you set a value.",
         "",
     ]

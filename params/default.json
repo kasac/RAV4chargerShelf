@@ -6,10 +6,8 @@
     "{\"name\": value} object (see params/measured.example.json). That file is picked",
     "up automatically by the CLI, rhino/build_all.py and the Grasshopper Params component.",
     "\"placeholder\": true marks a value that is not confirmed for YOUR car yet. With",
-    "\"basis\": \"reference\" it is a starting value estimated from the",
-    "cubby-constraint-reference-model, made for a slightly different RAV4 version",
-    "(confirm it with the fit coupon and profile gauge); without it, it is a guess.",
-    "The build report lists both.",
+    "\"basis\": \"reference\" it is an estimate (from the outside dimensions of other",
+    "models and the car) for the test prints to confirm; without it, a guess to measure.",
     "Coordinates: x = right (seen from the driver), y = from the front lip into the dash,",
     "z = up from the Qi pad surface. See docs/measuring.md."
   ],
@@ -17,7 +15,7 @@
     "W_ref": {
       "group": "cubby", "type": "float", "value": 231.55, "unit": "mm", "min": 80, "max": 350,
       "placeholder": true, "basis": "reference",
-      "doc": "Cubby width 10 mm behind the front lip, at height z_ref. Default: estimated from the cubby-constraint-reference-model (its clearance to the real walls is not included, see envelope_offset)."
+      "doc": "Cubby width 10 mm behind the front lip, at height z_ref. Estimate; see envelope_offset."
     },
     "z_ref": {
       "group": "cubby", "type": "float", "value": 55.0, "unit": "mm", "min": 0, "max": 200,
@@ -41,12 +39,12 @@
     "D_cubby": {
       "group": "cubby", "type": "float", "value": 129.88, "unit": "mm", "min": 40, "max": 300,
       "placeholder": true, "basis": "reference",
-      "doc": "Depth from the front lip to the rear wall, above the plugs. Default: depth of the reference model + front_recess + rear_gap (its position behind the lip is assumed)."
+      "doc": "Depth from the front lip to the rear wall, above the plugs. Estimate."
     },
     "H_cubby": {
       "group": "cubby", "type": "float", "value": 77.85, "unit": "mm", "min": 20, "max": 200,
       "placeholder": true, "basis": "reference",
-      "doc": "Height of the flat part of the roof above the Qi pad. Default: top of the reference model, assuming its lowest points reach the floor."
+      "doc": "Height of the flat part of the roof above the Qi pad. Estimate; the profile gauge checks it."
     },
     "rear_corner_length": {
       "group": "cubby", "type": "float", "value": 22.3, "unit": "mm", "min": 0, "max": 100,
@@ -110,7 +108,7 @@
     "W_lip": {
       "group": "cubby", "type": "float", "value": 236.0, "unit": "mm", "min": 60, "max": 350,
       "placeholder": true, "basis": "reference",
-      "doc": "Narrowest width of the opening at the front lip, at shelf height. Only used to check that the shelf can be inserted flat. Default: the reference model (235.2 wide) goes in."
+      "doc": "Narrowest width of the opening at the front lip, at shelf height. Only used to check that the shelf can be inserted flat. Estimate."
     },
 
     "H_ports_top": {
@@ -184,7 +182,7 @@
     },
     "envelope_offset": {
       "group": "fit", "type": "float", "value": 0.0, "unit": "mm", "min": -5, "max": 10,
-      "doc": "How far your car's side walls are outside the fitted envelope (the reference model's clearance to the real walls is unknown). Read it off the fit coupon: the gap you see per side when side_gap is 0."
+      "doc": "How far your car's side walls are outside the estimated envelope. Read it off the fit coupon: the gap you see per side when side_gap is 0."
     },
     "corner_radius_front": {
       "group": "fit", "type": "float", "value": 4.0, "unit": "mm", "min": 0, "max": 30,

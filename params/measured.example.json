@@ -18,6 +18,6 @@
   "led_y": null,
   "roof_bulge_depth": null,
   "roof_bulge_diameter": null,
-  "_after_the_test_prints": "The cubby walls and rear corners start from values estimated from the cubby-constraint-reference-model (made for a slightly different RAV4 version). Set envelope_offset to the gap you saw per side on the fit coupon; override other cubby values if a test print showed they differ (docs/measuring.md, step 3).",
+  "_after_the_test_prints": "Set envelope_offset to the gap you saw per side on the fit coupon; override other cubby values only if a test print showed they differ (docs/measuring.md, step 3).",
   "envelope_offset": 0.0
 }

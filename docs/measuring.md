@@ -1,194 +1,69 @@
-# Fitting the shelf to your car
+# Fitting to your car
 
-The cubby's side walls and rear corners start from values estimated from the
-**cubby-constraint-reference-model**, a model made for a slightly different RAV4 version (see
-README → Cubby reference model). They are a starting point, not a measurement. The roof is
-modelled after the GR Sport PHEV itself: its front edge is straight, and it bulges down slightly
-in the middle around the LED that lights the Qi pad and the plugs.
+The cubby shape is estimated from the outside dimensions of other models and from inspection and
+measurements of the car. Two test prints check it; then you measure what they can't show. About an
+hour of printing and 15 minutes in the car.
 
-Two quick test prints check the shape in *your* car. Then you measure the plugs, the phone, the LED
-and the bulge, and anything a test print shows to be different.
+You need the two prints, a ruler, paper strips or feeler gauges (80 g/m² paper ≈ 0.1 mm), and the
+adapters, cables and phone you actually use.
 
-Allow about an hour of printing and 15 minutes in the car.
+Frame in mm: x to the right seen from the driver (0 = centreline), y from the lip into the dash,
+z up from the Qi pad.
 
-## What you need
+## 1. Print
 
-- The two test prints (step 1)
-- A ruler, and paper strips or feeler gauges (80 g/m² paper is about 0.1 mm per sheet)
-- **The adapters, cables and phone you actually use.** A long 12 V USB adapter is the most common
-  reason these shelves don't seat (see the D-Lumina review in the brief).
+`python tools/rav4shelf.py coupon` writes both prints to `out/`. Print them in PETG as exported.
 
-## Coordinate frame
+- **Fit coupon** (~20 g): the shelf outline and its 8 mm edge band at `shelf_height`, on a thin plate
+  with an open centre.
+- **Profile gauge** (~11 g): the cubby cross-section 30 mm behind the lip, 0.3 mm smaller all round.
 
-The same frame is used everywhere: parameters, the Rhino model, the previews.
+## 2. Try them in the car
 
-```
-PLAN (looking down into the cubby)            FRONT (looking into the cubby from the driver seat)
+**Profile gauge:** stand it upright about 30 mm behind the lip, shorter straight edge on the Qi pad.
+Check the side gap from bottom to top, whether the top edge touches the roof all along, and any gap
+under the bottom edge.
 
-          rear wall  y = D_cubby                            ________     _______   roof, H_cubby:
-   +-------------[ plugs ]-------------+                   /        \_*_/       \  straight front edge;
-   |               |X_ports|           |                  |<------ W_ref ------>|  a slight bulge with
-   |                (  *  )  LED at    |                  |    at z = z_ref     |  the LED (*) in the
--x |                 + x = 0   led_y   | +x                \                    /  middle. Side walls:
-   |            (centreline)           |                    \                  /   an arc (wall_radius)
-   \                                   /  rear corners       \________________/    with wall_lean_deg
-    +---------------------------------+                         Qi pad, z = 0      at z_ref
-          front lip  y = 0  (driver)
+**Fit coupon:** plate up, rim down, notch toward the rear wall, top at `shelf_height` (58 mm) above the
+pad (books help). Note the side gaps at the front and rear on both sides, whether the rear corners
+touch first, and whether your plugs clear it.
 
-SIDE (section through the plugs, lip on the left)
+## 3. What to change
 
-   y = 0 (lip)                             y = D_cubby (rear wall)
-   |<------------------ D_cubby ------------------>|
-   |____________________\_*_/______________________|  z = H_cubby; bulge around the LED at led_y
-   |          shelf top = shelf_height        [adapter]  <- H_ports_top  (highest point of plug + cable)
-   |      ===========================        [ plugs ]
-   |                                          [       ]  <- H_ports_bottom
-   |                              |<- D_ports ->|
-   |___________ Qi pad ____________________________|  z = 0
-```
+Put changes in `params/measured.json`, then reprint what was off.
 
-- **x** runs to the right as seen from the driver, with 0 on the cubby centreline.
-- **y** runs from the front lip (y = 0) into the dash toward the rear wall.
-- **z** runs up from the Qi pad surface (z = 0).
-
-## The cubby envelope (about 20 numbers)
-
-These values describe the cubby. The side walls and rear corners start from values fitted to the
-reference model's outer surface. That model was made for a slightly different RAV4 version, so
-they're only starting values for the test prints to check. The roof follows the GR Sport PHEV.
-
-| Parameter | What it describes |
+| You saw | Change |
 |---|---|
-| `W_ref`, `z_ref` | width 10 mm behind the lip, at height `z_ref` above the pad |
-| `wall_lean_deg` | how much each side wall leans at `z_ref` (wider going up) |
-| `wall_radius` | seen from the front, the side walls are an arc of this radius: they curve in toward the floor |
-| `W_rear_delta` | how much narrower the cubby is near the rear wall than near the lip |
-| `D_cubby` | lip to rear wall |
-| `H_cubby` | height of the roof (its flat part) |
-| `rear_corner_length`, `rear_corner_inset`, `rear_corner_r_side`, `rear_corner_r_back` | rear corners seen from above: a chamfer from `rear_corner_length` in front of the rear wall to `rear_corner_inset` in from the side, rounded with the two radii |
-| `led_x`, `led_y` | where the LED in the roof is (it lights the Qi pad and the plugs) |
-| `roof_bulge_depth`, `roof_bulge_diameter` | the slight bulge down in the middle of the roof, modelled as a smooth round bump centred on the LED |
-| `roof_pocket_rise` (with `roof_pocket_width`, `_blend`, `_end`, `_shape`) | a raised pocket at the front of the roof that some RAV4 versions have; 0 on the GR Sport, whose front roof edge is straight |
-| `W_lip` | opening width at the lip (only used to check that the shelf goes in) |
+| The same gap `g` per side on both prints | `envelope_offset` = `g`; then `side_gap`: 0 snug, pad thickness for felt, negative for a press fit |
+| Gap larger at the front than at the rear, or the reverse | `W_rear_delta` |
+| Gauge side gap changes from bottom to top | `wall_lean_deg`, and `wall_radius` if uneven |
+| Gap `h` under the gauge | add `h` to `z_ref`, `H_cubby` and `shelf_height` |
+| Gauge doesn't reach the roof (gap `t`) | add `t` to `H_cubby` |
+| Gauge touches the roof only in the middle | the bulge reaches further forward: check `led_y`, `roof_bulge_diameter` |
+| Rear corners touch first | more `rear_corner_inset` or `rear_corner_length`; `rear_corner_r_side`, `rear_corner_r_back` round them |
+| Coupon too long or too short | `D_cubby` |
+| It won't go through the opening flat | `W_lip` |
+| Plugs touch the coupon | raise `shelf_height`, or widen the notch (`port_notch_width`, `port_notch_depth`) |
 
-**LED free zone.** `led_keepout_diameter` (50 mm) is a design rule, not a measurement: no part is
-built inside a column of that diameter under the LED, from the roof down to the Qi pad, so the LED
-stays uncovered and still lights the charger and the plugs. The previews and Rhino show it.
+To measure the cubby instead: `W_ref` is the width 10 mm behind the lip at height `z_ref` (55 mm). Take
+the smallest of three readings; trim panels flex.
 
-Three things the reference model can't tell, so they're assumptions:
-- **Clearance.** Its surface may sit some unknown distance inside your walls. That distance is
-  `envelope_offset`, and the fit coupon measures it.
-- **Floor height.** The floor is assumed to be at the model's lowest points. That's the highest
-  it can be (the model has to fit), so the profile gauge can only show a gap under it, never jam.
-- **Fore-aft position.** The model's front is assumed to sit 8 mm behind the lip.
+## 4. Measure the plugs, the phone and the roof LED
 
-## Step 1 – print the two test prints
+These are guesses until you measure them.
 
-```bash
-python tools/rav4shelf.py coupon      # out/fit_coupon.* and out/profile_gauge.*
-```
-
-- **Fit coupon** (~20 g, 30–40 min): the shelf's exact outline and 8 mm edge band at shelf height,
-  on a thin plate with an open centre. Print it plate down.
-- **Profile gauge** (~11 g, ~20 min): a flat frame that has the cubby's cross-section seen from
-  the front, at `gauge_y` = 30 mm behind the lip, 0.3 mm smaller all round. It shows the curved
-  walls, the floor and the roof's straight front part at once. Print it flat.
-
-Use PETG for both, like the real shelf, so the shrinkage matches. With `side_gap` 0 and
-`envelope_offset` 0 (the defaults), the coupon is exactly the size of the fitted envelope at
-that height.
-
-Optional, before printing anything: `python tools/rav4shelf.py preview` writes a 1:1 paper template
-(`out/fit_template_1to1.svg`). Print it at 100 % and check that the 50 mm bar measures 50 mm.
-
-## Step 2 – try them in the car
-
-**Profile gauge.** Stand it upright in the cubby, about 30 mm behind the lip, with its shorter
-straight edge on the Qi pad (the walls lean out going up, so the top edge is the longer one).
-
-1. **Sides:** is the gap to the side walls even from top to bottom? This checks the wall lean and
-   curve.
-2. **Top:** does its straight top edge touch the roof along its whole width?
-3. **Bottom:** is there a gap between its bottom edge and the Qi pad? Measure it.
-
-**Fit coupon.** Plate up, rim down, notch toward the rear wall, exactly as the shelf will sit. Hold
-it with its top at `shelf_height` (default 58 mm) above the Qi pad. A stack of books or a block cut
-to height helps.
-
-4. **Side gaps:** slide paper strips or feeler gauges between the rim and the wall at the front
-   and at the rear, on both sides. Note the four gaps.
-5. **Rear:** does it reach the rear wall? Do the rear corners touch before the sides do?
-6. **Plugs:** with your plugs inserted, is there air around them (in the notch, or under the
-   shelf)? Also look from the driver seat: can you still see the plugs?
-
-## Step 3 – what to change
-
-Put any changes in `params/measured.json`, then reprint the part that was off.
-
-| What you saw | Change |
+| Value | How |
 |---|---|
-| The same gap `g` per side on the coupon and the gauge | `envelope_offset` = `g`. Then choose `side_gap`: 0 for a snug fit, the pad thickness for felt or foam, or slightly negative for a press fit. |
-| Gap bigger at the front than at the rear (or the other way round) | `W_rear_delta` |
-| Gauge: the gap changes from top to bottom along the side | `wall_lean_deg` (and `wall_radius` if it changes unevenly) |
-| Gauge: gap `h` under its bottom edge | the floor is lower than assumed: add `h` to `z_ref`, `H_cubby` and the `shelf_height` you want |
-| Gauge: sits on the pad but doesn't reach the roof (gap `t`) | add `t` to `H_cubby` |
-| Gauge: its top touches the roof only in the middle | the bulge reaches further toward the lip than modelled: check `led_y` and `roof_bulge_diameter` (step 4) |
-| Rear corners touch first | increase `rear_corner_inset` or `rear_corner_length` |
-| Coupon too long or too short front to back | `D_cubby` |
-| Plugs touch the coupon | raise `shelf_height`, or size the notch: `port_notch_width`, `port_notch_depth`, `port_notch_offset_x` |
-| It doesn't go through the opening flat | `W_lip` (the checks then warn) |
+| `H_ports_top` | highest point of your real plugs, adapters and cable bends above the pad |
+| `H_ports_bottom` | lowest point of the plug cluster (previews only) |
+| `W_ports`, `X_ports` | width of the cluster, and its centre from the centreline (+ = right) |
+| `D_ports` | how far plugs and cables stick out from the rear wall |
+| `qi_center_x`, `qi_center_y` | centre of the charging spot: from the centreline, and from the lip |
+| `phone_length`, `phone_width`, `phone_thickness` | your phone in its case, camera bump included |
+| `led_y` | lip to the centre of the roof LED; set `led_x` too if it is off-centre |
+| `roof_bulge_depth` | roof height at the side minus roof height next to the LED (ruler standing on the pad) |
+| `roof_bulge_diameter` | roughly how wide the bulge is |
+| `shelf_height` | the height you want for the shelf top; the checks say whether the plugs clear it |
 
-If both prints fit, the cubby is described well enough and the shelf can be designed on top of it.
-
-## Step 4 – measure the plugs, the phone and the roof LED
-
-These are still guesses. They decide the shelf height, the port notch and where parts may sit
-near the roof.
-
-| Parameter | How to measure |
-|---|---|
-| `H_ports_top` | Plug in your **real** adapters and cables, routed as you normally route them. Measure the highest point of any plug, adapter body or cable bend, above the Qi pad. This single number decides whether plugs can pass under the shelf. |
-| `H_ports_bottom` | Lowest point of the plug cluster above the Qi pad. Only used in the previews. |
-| `W_ports` | Lateral width of the whole cluster (plugs, adapters, cable bends). Measure from the left wall to the cluster's left edge (a) and to its right edge (b), at plug height: `W_ports = b - a`. |
-| `X_ports` | Lateral centre of the cluster relative to the cubby centreline, positive to the right. With a and b from above and the cubby width W at that height: `X_ports = (a + b) / 2 - W / 2`. |
-| `D_ports` | How far the plugs, adapters and cable bends stick out from the rear wall into the cubby. |
-| `qi_center_x`, `qi_center_y` | Centre of the charging spot (where the phone has to lie): lateral position from the centreline, and distance from the lip. |
-| `phone_length`, `phone_width`, `phone_thickness` | Your phone **in its case**, including the camera bump. The model assumes the phone lies crosswise (long side along x). |
-| `led_y` | Distance from the front lip to the centre of the LED in the roof. If the LED is not on the centreline, also set `led_x` (positive to the right). |
-| `roof_bulge_depth` | Stand a ruler on the Qi pad and read the roof height at the side (the flat part) and at the lowest point of the bulge, next to the LED. The difference is the depth. |
-| `roof_bulge_diameter` | Roughly how wide the bulge is, where the roof starts to curve down. It is modelled as round; if it is clearly oval, note both sizes. |
-
-**Shelf height.** `shelf_height` is the height of the shelf's top surface above the Qi pad. The
-shelf's edge band reaches `frame_height` (8 mm) below it. The default, 58 mm, leaves about 20 mm
-above it for a drawer and 50 mm below it for the phone and plugs.
-- Plugs pass under the shelf if `shelf_height >= H_ports_top + port_clearance + frame_height`.
-- Otherwise they poke up through the rear notch. The checks tell you whether the notch clears them.
-- The phone needs `phone_clearance_min` (20 mm) under the lowest part of the shelf.
-- Whatever is left up to the roof (`H_cubby - shelf_height`, less under the bulge) is the space for
-  the drawer.
-
-Write these into `params/measured.json` (start from `params/measured.example.json`) and run
-`python tools/rav4shelf.py check`. The report lists every value that is still unconfirmed.
-
-## If you would rather measure the cubby yourself
-
-Measure `W_ref` 10 mm behind the lip at height `z_ref`. Measure a second width `W_low` 20 mm lower;
-then `wall_lean_deg = atan((W_ref - W_low) / 40)` in degrees. Keep the fitted `wall_radius`, which
-is hard to measure. For `W_rear_delta`, measure the width 10 mm in front of the rear wall at the
-same height and subtract `W_ref`. For the rear corners, press card into a corner and trace it.
-Measure each value three times and take the median. For widths, take the smallest reading: trim
-panels bulge, and they flex if you push.
-
-If you have the reference model in `reference/`, `python tools/rav4shelf.py reference` compares
-your numbers with its estimate. A difference of more than about 5 mm per side usually means a
-wrong measurement, or that your car has another dash variant.
-
-## Reporting back
-
-Please send:
-- your `params/measured.json`
-- what you saw in step 2: the four coupon gaps, the gauge gaps (sides, top, bottom), and anything
-  that touched
-- photos of both prints in the cubby, from the driver seat and from above
-
-The shelf phase starts from there.
+Then run `python tools/rav4shelf.py check`: it lists every value still unconfirmed. Please send your
+`params/measured.json`, the gaps from step 2 and photos of both prints in the cubby.

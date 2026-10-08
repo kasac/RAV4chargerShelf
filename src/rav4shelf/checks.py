@@ -42,8 +42,7 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
     guesses = [n for n in p.placeholders if n not in fitted]
     if fitted:
         add("warning", "unconfirmed_reference",
-            "%d cubby values are starting values from the cubby reference model (made for a "
-            "slightly different RAV4 version), not confirmed for your car yet: %s. Print the fit "
+            "%d cubby values are estimates, not confirmed for your car yet: %s. Print the fit "
             "coupon and the profile gauge (docs/measuring.md)."
             % (len(fitted), ", ".join(fitted)))
     if guesses:
