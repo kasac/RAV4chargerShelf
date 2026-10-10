@@ -3,6 +3,7 @@
     python tools/rav4shelf.py check            # report + sanity checks
     python tools/rav4shelf.py coupon           # test prints: fit coupon + profile gauge
     python tools/rav4shelf.py preview          # overview, 1:1 template, cubby_envelope.stl
+    python tools/rav4shelf.py roof             # roof plate: STL + 3MF (standing) + drawing
     python tools/rav4shelf.py all              # everything above
     python tools/rav4shelf.py reference        # compare with the cubby reference model
 
@@ -52,6 +53,24 @@ def build_coupon_files(p, d, out_dir: str):
             label, x1 - x0, y1 - y0, z1 - z0, meshing.mesh_volume_cm3(mesh),
             meshing.petg_grams(mesh)))
     return files, "\n".join(info)
+
+
+def build_roof_files(p, d, out_dir: str):
+    """The roof plate, standing on its rear edge as printed, plus its drawing."""
+    mesh = meshing.roof_plate_mesh(p, d)
+    problems = meshing.check_closed(mesh)
+    if problems:
+        raise GeometryError("roof plate mesh is not watertight: %s" % "; ".join(problems[:5]))
+    grams = meshing.petg_grams(mesh)
+    printed = meshing.standing_print_orientation(mesh)
+    files = [os.path.join(out_dir, "roof_plate" + ext) for ext in (".stl", ".3mf", ".svg")]
+    fileio.write_stl(files[0], printed.vertices, printed.faces, "rav4shelf roof_plate")
+    fileio.write_3mf(files[1], printed.vertices, printed.faces, "roof_plate")
+    _write(files[2], preview_svg.roof_plate_svg(p, d, grams))
+    (x0, y0, z0), (x1, y1, z1) = printed.bbox()
+    info = ("roof plate (standing on its rear edge): %.1f x %.1f x %.1f mm, ~%.0f g PETG"
+            % (x1 - x0, y1 - y0, z1 - z0, grams))
+    return files, info
 
 
 def run_reference(p, d, args) -> int:
@@ -112,7 +131,7 @@ def run_reference(p, d, args) -> int:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="rav4shelf", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["check", "coupon", "preview", "all", "reference"])
+    ap.add_argument("command", choices=["check", "coupon", "preview", "roof", "all", "reference"])
     ap.add_argument("-p", "--params", action="append", default=[],
                     help="extra override JSON file (repeatable, applied in order)")
     ap.add_argument("--defaults-only", action="store_true",
@@ -166,6 +185,15 @@ def main(argv=None) -> int:
             print("not writing the fit coupon: fix the errors above first", file=sys.stderr)
             return 1
         files, info = build_coupon_files(p, d, args.out)
+        written += files
+        print(info)
+
+    if args.command in ("roof", "all"):
+        try:
+            files, info = build_roof_files(p, d, args.out)
+        except (GeometryError, params.ParamError) as exc:
+            print("not writing the roof plate: %s" % exc, file=sys.stderr)
+            return 1
         written += files
         print(info)
 

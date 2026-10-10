@@ -223,7 +223,7 @@
     },
     "deck_thickness": {
       "group": "strength", "type": "float", "value": 2.4, "unit": "mm", "min": 1.0, "max": 8,
-      "doc": "Thickness of the perforated deck."
+      "doc": "Thickness of the shelf deck."
     },
     "frame_width": {
       "group": "strength", "type": "float", "value": 8.0, "unit": "mm", "min": 3, "max": 20,
@@ -242,30 +242,51 @@
       "doc": "Rib height below the deck."
     },
 
-    "grid_style": {
-      "group": "perforation", "type": "choice", "value": "hex",
-      "choices": ["hex", "square", "diamond", "round", "slot", "triangle"],
-      "doc": "Perforation pattern."
+    "roof_thickness": {
+      "group": "roof", "type": "float", "value": 2.0, "unit": "mm", "min": 0.8, "max": 6,
+      "doc": "Thickness of the roof plate."
     },
-    "cell_size": {
-      "group": "perforation", "type": "float", "value": 8.0, "unit": "mm", "min": 3, "max": 40,
-      "doc": "Opening size of one grid cell (across flats for hex)."
+    "roof_clearance": {
+      "group": "roof", "type": "float", "value": 0.3, "unit": "mm", "min": 0, "max": 5,
+      "doc": "Gap between the roof plate's front strip and the cubby roof."
     },
-    "bar_width": {
-      "group": "perforation", "type": "float", "value": 1.8, "unit": "mm", "min": 0.8, "max": 10,
-      "doc": "Width of the web between openings. At least 2 perimeters of your nozzle."
+    "roof_depression_start": {
+      "group": "roof", "type": "float", "value": 15.0, "unit": "mm", "min": 0, "max": 80,
+      "doc": "Front strip of the roof plate that stays at full height, from its front edge."
     },
-    "grid_angle": {
-      "group": "perforation", "type": "float", "value": 0.0, "unit": "deg", "min": -90, "max": 90,
-      "doc": "Rotation of the grid pattern."
+    "roof_depression_depth": {
+      "group": "roof", "type": "float", "value": 4.0, "unit": "mm", "min": 0, "max": 15,
+      "doc": "How much lower the rest of the roof plate is (clears the roof bulge and the LED). 0 = flat."
     },
-    "grid_enabled_shelf": {
+    "roof_depression_ramp": {
+      "group": "roof", "type": "float", "value": 10.0, "unit": "mm", "min": 1, "max": 60,
+      "doc": "Length of the smooth (cosine) transition. Longer = gentler overhang when printed standing; see max_overhang_deg."
+    },
+
+    "perforate_roof": {
       "group": "perforation", "type": "bool", "value": true,
-      "doc": "Perforate the shelf deck."
+      "doc": "Perforate the roof plate (its lowered, flat part)."
     },
-    "grid_enabled_drawer_floor": {
-      "group": "perforation", "type": "bool", "value": true,
-      "doc": "Perforate the drawer floor."
+    "perforation_style": {
+      "group": "perforation", "type": "choice", "value": "teardrop",
+      "choices": ["teardrop", "diamond", "none"],
+      "doc": "Hole shape. Both print without support with the part standing on its rear edge: the upper edges rise at perforation_tip_angle. teardrop = round with a pointed top; diamond = straight bars of one width."
+    },
+    "perforation_size": {
+      "group": "perforation", "type": "float", "value": 10.0, "unit": "mm", "min": 3, "max": 40,
+      "doc": "Width of one hole."
+    },
+    "perforation_open_fraction": {
+      "group": "perforation", "type": "float", "value": 0.5, "unit": "", "min": 0.05, "max": 0.8,
+      "doc": "Share of the perforated area that is open (material removed). The bar width follows from it."
+    },
+    "perforation_tip_angle": {
+      "group": "perforation", "type": "float", "value": 45.0, "unit": "deg", "min": 20, "max": 45,
+      "doc": "Angle of the holes' upper edges from vertical when printed standing. Smaller = taller holes, safer printing."
+    },
+    "perforation_margin": {
+      "group": "perforation", "type": "float", "value": 5.0, "unit": "mm", "min": 1, "max": 30,
+      "doc": "Solid border between the holes and the plate's edges."
     },
 
     "drawer_type": {
@@ -353,7 +374,11 @@
 
     "min_bar_width": {
       "group": "checks", "type": "float", "value": 0.9, "unit": "mm", "min": 0.2, "max": 5,
-      "doc": "Warn if grid bars are thinner (default = 2 perimeters at a 0.4 mm nozzle)."
+      "doc": "Warn if the bars between perforations are thinner (default = 2 perimeters at a 0.4 mm nozzle)."
+    },
+    "max_overhang_deg": {
+      "group": "checks", "type": "float", "value": 45.0, "unit": "deg", "min": 20, "max": 60,
+      "doc": "Steepest overhang (from vertical) for parts printed standing on their rear edge: the roof ramp and the rear corners are kept within it."
     },
     "min_wall": {
       "group": "checks", "type": "float", "value": 0.9, "unit": "mm", "min": 0.2, "max": 5,

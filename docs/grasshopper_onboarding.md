@@ -30,18 +30,20 @@ in their balloon. Shift-drag adds a wire, Ctrl-drag removes one. Right-click →
 2. Place a **Python 3 Script** component. Not "Python Script" or "IronPython 2 Script": those run
    Python 2.
 3. Zoom in until **⊕ / ⊖** appear. Keep one input: rename it **`S`** and set **List Access**
-   (right-click). Make five outputs: **`coupon`**, **`gauge`**, **`envelope`**, **`cubby`**, **`report`**.
+   (right-click). Make six outputs: **`coupon`**, **`gauge`**, **`envelope`**, **`roof`**, **`cubby`**,
+   **`report`**.
 4. Double-click the component, replace its code with the file, press **Run**, close the editor.
 5. Wire `report` into a Panel.
 
-The coupon, the gauge, the cubby envelope and the LED free zone appear in the viewports (zoom out if
-needed: the cubby is ~240 mm wide).
+The coupon, the gauge, the roof plate, the cubby envelope and the LED free zone appear in the
+viewports (zoom out if needed: the cubby is ~240 mm wide). Try sliders named `perforation_size`,
+`perforation_open_fraction` or `roof_depression_depth`.
 
 **Sliders:** a Number Slider named exactly like a parameter, e.g. `shelf_height` (double-click its
 name: name, range 30–75, value 58, floating point), wired into `S`. Ranges are in
 [parameters.md](parameters.md); unknown names are listed as "ignored" in the report.
 
-**Many sliders:** add inputs **`sliders`** (a Button) and **`groups`** (a Panel, e.g. `fit,coupon`).
+**Many sliders:** add inputs **`sliders`** (a Button) and **`groups`** (a Panel, e.g. `roof,perforation`).
 Pressing the button creates and wires one slider per parameter of those groups, set to the current
 values.
 

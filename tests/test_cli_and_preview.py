@@ -14,6 +14,20 @@ def test_cli_all_writes_files(tmp_path, capsys):
     assert "PLACEHOLDER" in capsys.readouterr().out
 
 
+def test_cli_roof_writes_the_plate(tmp_path, capsys):
+    from rav4shelf import fileio, meshing
+    rc = cli.main(["roof", "--defaults-only", "-o", str(tmp_path)])
+    assert rc == 0
+    names = set(os.listdir(str(tmp_path)))
+    assert {"roof_plate.stl", "roof_plate.3mf", "roof_plate.svg"} <= names
+    tris = fileio.read_stl(os.path.join(str(tmp_path), "roof_plate.stl"))
+    verts = [v for t in tris for v in t]
+    faces = [(3 * i, 3 * i + 1, 3 * i + 2) for i in range(len(tris))]
+    assert meshing.check_closed(meshing.Mesh(*fileio.weld(verts, faces))) == []
+    assert "roof plate (standing on its rear edge)" in capsys.readouterr().out
+    ET.parse(os.path.join(str(tmp_path), "roof_plate.svg"))
+
+
 def test_cli_uses_override_file(tmp_path, capsys):
     f = tmp_path / "m.json"
     f.write_text(json.dumps({"D_cubby": 140.0, "front_recess": 8.0, "rear_gap": 1.0}))

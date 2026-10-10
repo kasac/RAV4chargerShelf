@@ -33,6 +33,7 @@ LAYER_COLORS = {
     "ports": (192, 57, 43),
     "phone": (127, 140, 141),
     "led_keepout": (241, 196, 15),
+    "roof_plate": (47, 109, 181),
 }
 
 # Created switched off: the envelope solid would hide the parts inside it.
@@ -163,6 +164,24 @@ def _net_guids(ids):
     for i in ids:
         lst.Add(i)
     return lst
+
+
+def export_mesh_part(name: str, pure_mesh, out_dir: str, formats=("3mf", "stl")):
+    """Write a pure-Python mesh, stood on its rear edge as printed, to STL/3MF.
+    Returns (paths, messages)."""
+    if not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
+    printed = meshing.standing_print_orientation(pure_mesh)
+    problems = meshing.check_closed(printed)
+    msgs = ["%s mesh is not watertight: %s" % (name, "; ".join(problems[:3]))] if problems else []
+    paths = []
+    if "stl" in formats:
+        paths.append(os.path.join(out_dir, name + ".stl"))
+        fileio.write_stl(paths[-1], printed.vertices, printed.faces, "rav4shelf " + name)
+    if "3mf" in formats:
+        paths.append(os.path.join(out_dir, name + ".3mf"))
+        fileio.write_3mf(paths[-1], printed.vertices, printed.faces, name)
+    return paths, msgs
 
 
 def export_part(name: str, breps, out_dir: str, formats=("step", "3mf", "stl"),

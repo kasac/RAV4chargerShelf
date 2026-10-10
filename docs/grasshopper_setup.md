@@ -8,7 +8,8 @@ wrapper component per part imports the code from your clone, and **reload** pick
 [sliders] ──► S ┐
 [Panel] ─► groups│ PARAMS  P ──┬──► FIT COUPON     coupon ──► EXPORT (name = "fit_coupon")
 [Button] ► sliders│            ├──► PROFILE GAUGE  gauge_print ──► EXPORT (name = "profile_gauge")
-[Button] ► reload ┘            └──► CONTEXT        cubby, ports, phone
+[Button] ► reload ┘            ├──► ROOF PLATE     roof
+                               └──► CONTEXT        cubby, ports, phone
 ```
 
 1. Clone the repo. In Rhino 8 (units: millimetres) open Grasshopper and save the empty definition as

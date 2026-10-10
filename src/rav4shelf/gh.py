@@ -16,7 +16,7 @@ import os
 
 import Rhino
 
-from . import checks, export, geometry, layout, params
+from . import checks, export, geometry, layout, meshing, params
 
 SLIDER_INPUT = "S"
 
@@ -120,6 +120,18 @@ def profile_gauge_component(P, tol=geometry.DEFAULT_TOL):
                                                   geometry.volume_cm3(flat) * 1.27)]
     report += msgs or ["closed valid solid: OK"]
     return standing, flat, "\n".join(report)
+
+
+def roof_plate_component(P):
+    """Roof plate component -> (roof plate mesh in the car frame, report)."""
+    d = params.derive(P)
+    mesh, pure = geometry.build_roof_plate(P, d)
+    report = ["roof_plate: %d holes, ~%.0f g PETG" % (len(layout.roof_plate_holes(P, d)),
+                                                     meshing.petg_grams(pure)),
+              "ramp overhang %.0f deg (limit %.0f) when printed standing"
+              % (layout.roof_ramp_overhang_deg(P), P.max_overhang_deg)]
+    report += meshing.check_closed(pure) or ["closed mesh: OK"]
+    return mesh, "\n".join(report)
 
 
 def context_component(P):

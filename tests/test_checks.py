@@ -60,9 +60,24 @@ def test_phone_clearance():
     assert "phone_clearance" in codes(checks.run_checks(p, d), "warning")
 
 
-def test_thin_bars_warn():
-    p, d = make(bar_width=0.8, min_bar_width=0.9)
-    assert "thin_bar_width" in codes(checks.run_checks(p, d), "warning")
+def test_thin_perforation_bars_warn():
+    p, d = make(perforation_style="diamond", perforation_size=4.0, perforation_open_fraction=0.8,
+                min_bar_width=0.9)
+    assert "thin_perforation_bars" in codes(checks.run_checks(p, d), "warning")
+    assert not checks.has_errors(checks.run_checks(p, d))  # never stops the test prints
+
+
+def test_roof_checks():
+    p, d = make()
+    found = checks.run_checks(p, d)
+    assert "roof_covers_led" in codes(found, "info")
+    assert not {"roof_ramp_steep", "roof_plate_hits_roof"} & set(codes(found, "warning"))
+    p, d = make(roof_depression_ramp=3.0)  # 4 mm over 3 mm: about 64 deg
+    assert "roof_ramp_steep" in codes(checks.run_checks(p, d), "warning")
+    p, d = make(roof_depression_depth=1.0)  # the 3 mm bulge reaches the plate
+    assert "roof_plate_hits_roof" in codes(checks.run_checks(p, d), "warning")
+    p, d = make(perforation_style="teardrop", perforation_size=4.0, perforation_open_fraction=0.8)
+    assert "thin_perforation_bars" in codes(checks.run_checks(p, d), "warning")  # 0.27 mm bars
 
 
 def test_geometry_error_becomes_finding():

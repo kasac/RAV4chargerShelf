@@ -14,8 +14,9 @@ from __future__ import annotations
 import math
 from typing import List, Tuple
 
+from . import perforation
 from .geom2d import GeometryError, Outline, Point
-from .params import Derived, Params, cubby_half_width, cubby_width, roof_height
+from .params import Derived, Params, cubby_half_width, cubby_width, derive, roof_height
 
 
 # --------------------------------------------------------------------------
@@ -218,6 +219,104 @@ def _uneven_roof(p: Params, y: float):
     if not spans:
         return None
     return min(a for a, _ in spans), max(b for _, b in spans)
+
+
+# --------------------------------------------------------------------------
+# roof plate: prints standing on its rear edge (car front = up)
+# --------------------------------------------------------------------------
+
+def roof_depression(p: Params, s: float) -> float:
+    """How far the roof plate is lowered at s mm behind its front edge: 0 over
+    the front strip, then a cosine ramp down to roof_depression_depth."""
+    a, ramp, h = p.roof_depression_start, p.roof_depression_ramp, p.roof_depression_depth
+    if h <= 0 or s <= a:
+        return 0.0
+    if s >= a + ramp:
+        return h
+    return h * 0.5 * (1.0 - math.cos(math.pi * (s - a) / ramp))
+
+
+def roof_ramp_overhang_deg(p: Params) -> float:
+    """Steepest overhang of the ramp when the plate prints standing on its rear
+    edge (the cosine ramp is steepest in its middle)."""
+    if p.roof_depression_depth <= 0:
+        return 0.0
+    return math.degrees(math.atan(math.pi / 2.0 * p.roof_depression_depth
+                                  / p.roof_depression_ramp))
+
+
+def roof_plate_top(p: Params, d: Derived, y: float) -> float:
+    """Height of the roof plate's top surface at plan y."""
+    return p.H_cubby - p.roof_clearance - roof_depression(p, y - d.y_front)
+
+
+def roof_flat_from(p: Params, d: Derived) -> float:
+    """Plan y where the plate's lowered, flat part begins."""
+    ramp = p.roof_depression_ramp if p.roof_depression_depth > 0 else 0.0
+    return d.y_front + p.roof_depression_start + ramp
+
+
+def roof_plate_outline(p: Params, d: Derived) -> List[Point]:
+    """Plan of the roof plate (CCW ring): the shelf outline at the plate's
+    lowest point, without the port notch, with its rear corners cut back so it
+    prints standing on its rear edge (see printable_ring)."""
+    pr = p.with_overrides({"port_notch_width": 0.0}, "roof plate")
+    z_low = (p.H_cubby - p.roof_clearance - p.roof_depression_depth - p.roof_thickness)
+    ring = shelf_outline(pr, derive(pr), z_low).ring(p.arc_segments_per_90)
+    return printable_ring(ring, p.max_overhang_deg)
+
+
+def printable_ring(ring: List[Point], max_overhang_deg: float) -> List[Point]:
+    """Cut a convex plan so that, standing on its rear edge (largest y) with the
+    front up, no side leans out more than max_overhang_deg from the vertical."""
+    y_rear = max(y for _, y in ring)
+    rear = [x for x, y in ring if y >= y_rear - 1e-6]
+    k = math.tan(math.radians(max_overhang_deg))
+    x_a, x_b = min(rear), max(rear)
+    ring = _clip(ring, lambda x, y: (x - x_b) - k * (y_rear - y))
+    ring = _clip(ring, lambda x, y: (x_a - x) - k * (y_rear - y))
+    out = []
+    for pt in ring:
+        if not out or math.hypot(pt[0] - out[-1][0], pt[1] - out[-1][1]) > 1e-6:
+            out.append(pt)
+    if math.hypot(out[0][0] - out[-1][0], out[0][1] - out[-1][1]) <= 1e-6:
+        out.pop()
+    return out
+
+
+def _clip(ring, f):
+    """Part of a convex ring where f(x, y) <= 0 (Sutherland-Hodgman)."""
+    out = []
+    n = len(ring)
+    for i in range(n):
+        p0, p1 = ring[i], ring[(i + 1) % n]
+        f0, f1 = f(*p0), f(*p1)
+        if f0 <= 0:
+            out.append(p0)
+        if (f0 < 0 < f1) or (f1 < 0 < f0):
+            t = f0 / (f0 - f1)
+            out.append((p0[0] + t * (p1[0] - p0[0]), p0[1] + t * (p1[1] - p0[1])))
+    return out
+
+
+def roof_pattern(p: Params):
+    """The perforation pattern of the roof plate, or None."""
+    if not p.perforate_roof or p.perforation_style == "none":
+        return None
+    return perforation.pattern(p.perforation_style, p.perforation_size,
+                               p.perforation_open_fraction, p.perforation_tip_angle,
+                               p.arc_segments_per_90)
+
+
+def roof_plate_holes(p: Params, d: Derived, outline: List[Point] = None) -> List[List[Point]]:
+    """Perforations of the roof plate: only in its lowered flat part, so their
+    walls stay straight."""
+    pat = roof_pattern(p)
+    if pat is None:
+        return []
+    outline = outline or roof_plate_outline(p, d)
+    return perforation.holes_in_region(outline, pat, p.perforation_margin,
+                                       y_min=roof_flat_from(p, d))
 
 
 # --------------------------------------------------------------------------

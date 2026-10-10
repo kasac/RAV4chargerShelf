@@ -19,7 +19,8 @@ USED_BY = {
     "cubby": "the cubby model: fit coupon, profile gauge, all parts", "ports": "checks, previews",
     "phone": "checks, previews",
     "fit": "fit coupon, shelf", "strength": "shelf (fit coupon uses frame_height)",
-    "perforation": "shelf, drawer (planned)", "drawer": "drawer (planned)",
+    "roof": "roof plate", "perforation": "roof plate (later also shelves)",
+    "drawer": "drawer (planned)",
     "tolerances": "drawer, hinge (planned)", "coupon": "fit coupon, profile gauge",
     "checks": "checks, export",
 }

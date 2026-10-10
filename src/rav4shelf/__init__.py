@@ -1,7 +1,7 @@
 """RAV4chargerShelf: parametric 3D-printable shelf for the RAV4 XA50 charger cubby.
 
 Pure-Python modules (no Rhino, unit-tested on CI):
-    geom2d, params, layout, checks, meshing, fileio, reference, preview_svg, cli
+    geom2d, params, perforation, layout, checks, meshing, fileio, reference, preview_svg, cli
 
 RhinoCommon modules (run inside Rhino 8 / Grasshopper only):
     geometry, export, gh
@@ -17,6 +17,7 @@ __version__ = "0.1.0"
 _MODULES = [
     "geom2d",
     "params",
+    "perforation",
     "layout",
     "checks",
     "meshing",

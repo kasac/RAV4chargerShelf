@@ -122,6 +122,17 @@ def test_build_envelope(fake):
     assert curves.Add.call_count == len(layout.envelope_levels(p))  # one section per level
 
 
+def test_build_roof_plate_and_component(fake):
+    from rav4shelf import geometry, gh, meshing
+    p = params.load_params()
+    mesh, pure = geometry.build_roof_plate(p, params.derive(p))
+    assert meshing.check_closed(pure) == []
+    assert mesh.Vertices.Add.call_count == len(pure.vertices)
+    assert mesh.Faces.AddFace.call_count == len(pure.faces)
+    _, report = gh.roof_plate_component(p)
+    assert "roof_plate:" in report and "closed mesh: OK" in report
+
+
 def test_profile_gauge_component(fake):
     from rav4shelf import gh
     _setup_booleans(fake.rg)
@@ -176,11 +187,11 @@ def test_params_component_reads_named_sliders(fake):
     from rav4shelf import gh
     fake.rhino.RhinoDoc.ActiveDoc.ModelUnitSystem = fake.rhino.UnitSystem.Millimeters
     extra = _gh_source("D_cubby", 133.0)  # an input named like a parameter
-    comp = _gh_component(fake, [_gh_source("W_ref", 231.0), _gh_source("grid_style", "square"),
+    comp = _gh_component(fake, [_gh_source("W_ref", 231.0), _gh_source("perforation_style", "diamond"),
                                 _gh_source("Slider", 5.0)], [extra])
     P, report = gh.params_component(comp)
     assert P.W_ref == 231.0
-    assert P.grid_style == "square"
+    assert P.perforation_style == "diamond"
     assert P.D_cubby == 133.0
     assert "Ignored" in report and "Slider" in report
     assert "not millimetres" not in report

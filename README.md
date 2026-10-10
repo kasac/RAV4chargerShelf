@@ -23,6 +23,7 @@ run in Rhino yet.
 python tools/rav4shelf.py coupon    # test prints: out/fit_coupon.*, out/profile_gauge.* (STL, 3MF)
 python tools/rav4shelf.py check     # report and checks
 python tools/rav4shelf.py preview   # drawings and out/cubby_envelope.stl
+python tools/rav4shelf.py roof      # roof plate: out/roof_plate.* (STL, 3MF, drawing)
 ```
 
 Python 3.9+, nothing else. Your values go in `params/measured.json` (start from
@@ -51,6 +52,15 @@ layers `RAV4chargerShelf::<part>`; the `envelope` layer (the cubby as a solid) s
 Frame in mm: x to the right seen from the driver, y from the lip into the dash, z up from the Qi pad.
 All parameters are in [`params/default.json`](params/default.json), explained in
 [docs/parameters.md](docs/parameters.md).
+
+## Roof plate
+
+The top of the planned storage. It prints standing on its rear edge:
+
+- The front 15 mm sit just under the roof. The rest is 4 mm lower over a smooth ramp, clear of the
+  bulge and the LED (`roof_depression_*`).
+- It is perforated with teardrop (default) or diamond holes. Size, open share and tip angle are
+  parameters (`perforation_*`). The tips point to the lip, so the holes print without support.
 
 ## Test prints
 
@@ -85,6 +95,6 @@ Please report the exact message if one of these fails:
 
 ## Open decisions
 
-1. **What to build:** the roof LED must stay uncovered, so probably small storage at the sides of the
-   roof instead of a full-width shelf.
+1. **What to build:** small storage at the sides, under the roof plate. Does the LED zone need a full
+   opening, or is the perforation (about half open) enough?
 2. **How it is held:** wedged between the leaning side walls, or on plates down the walls.

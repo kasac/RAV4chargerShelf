@@ -66,7 +66,10 @@ MOCKS = """
     class Brep(mock.MagicMock):  # real classes, so that bake()'s isinstance works
         pass
 
-    rg.Brep, rg.Curve, rg.Mesh = Brep, type("Curve", (), {}), type("Mesh", (), {})
+    class Mesh(mock.MagicMock):
+        pass
+
+    rg.Brep, rg.Curve, rg.Mesh = Brep, type("Curve", (), {}), Mesh
 
     def solid():
         b = Brep()
@@ -172,14 +175,14 @@ def test_bundle_main_in_rhino(tmp_path):
     out = _run(MOCKS + """
     runpy.run_path(BUNDLE, run_name="__main__")
     print("baked", sorted({c.args[0] for c in doc.Layers.FindByFullPath.call_args_list}))
-    print("breps", doc.Objects.AddBrep.call_count)
+    print("breps", doc.Objects.AddBrep.call_count, "meshes", doc.Objects.AddMesh.call_count)
     """, tmp_path)
     assert "fit_coupon: built by boolean" in out
     assert "profile_gauge: built by boolean" in out
     for layer in ("fit_coupon", "profile_gauge", "envelope", "cubby", "ports", "phone",
-                  "led_keepout"):
+                  "led_keepout", "roof_plate"):
         assert "RAV4chargerShelf::" + layer in out
-    assert "breps 3" in out  # coupon, gauge, envelope (the plug and phone boxes are mocks)
+    assert "breps 3 meshes 1" in out  # coupon, gauge, envelope; roof plate (boxes are mocks)
 
 
 def test_bundle_main_stops_on_wrong_units(tmp_path):
@@ -211,6 +214,7 @@ def test_bundle_in_grasshopper(tmp_path):
     g = runpy.run_path(BUNDLE, init_globals={"ghenv": ghenv, "export": False},
                        run_name="ghscript")
     assert g["coupon"] is not None and g["gauge"] is not None and g["envelope"] is not None
+    assert g["roof"] is not None
     assert len(g["cubby"]) == 6 + 6 + 2  # wireframe, LED free zone, plug and phone boxes
     assert not doc.Objects.AddBrep.called  # Grasshopper shows, it does not bake
     print(g["report"])

@@ -13,7 +13,7 @@ import math
 import Rhino.Geometry as rg
 from System.Collections.Generic import List as NetList
 
-from . import layout
+from . import layout, meshing
 from .geom2d import Outline
 from .params import Derived, Params
 
@@ -198,6 +198,25 @@ def build_envelope(p: Params, d: Derived, tol: float = DEFAULT_TOL) -> rg.Brep:
     if capped is None:
         raise BuildError("capping the envelope failed")
     return _outward(capped)
+
+
+def mesh_from(pure) -> rg.Mesh:
+    """Rhino mesh from a pure-Python meshing.Mesh."""
+    mesh = rg.Mesh()
+    for x, y, z in pure.vertices:
+        mesh.Vertices.Add(x, y, z)
+    for a, b, c in pure.faces:
+        mesh.Faces.AddFace(a, b, c)
+    mesh.Normals.ComputeNormals()
+    mesh.Compact()
+    return mesh
+
+
+def build_roof_plate(p: Params, d: Derived):
+    """The roof plate in the car frame. Returns (Rhino mesh, pure mesh): it is
+    made by the pure-Python mesher, which CI tests, not as a B-rep."""
+    pure = meshing.roof_plate_mesh(p, d)
+    return mesh_from(pure), pure
 
 
 def build_context(p: Params, d: Derived) -> dict:

@@ -46,7 +46,7 @@ from rav4shelf import checks, export, geometry, params  # noqa: E402
 
 # ---- settings -------------------------------------------------------------
 EXTRA_OVERRIDES = []  # e.g. [os.path.join(REPO, "params", "tight_fit.json")]
-PARTS = ["fit_coupon", "profile_gauge"]  # shelf, drawer, hinge_pin, tpu_bumpers: later
+PARTS = ["fit_coupon", "profile_gauge", "roof_plate"]
 FORMATS = ("step", "3mf", "stl")
 OUT_DIR = os.path.join(REPO, "out")
 # ---------------------------------------------------------------------------
@@ -80,6 +80,14 @@ def main():
     # each builder returns (part to export, part to bake in the car frame, method)
     builders = {"fit_coupon": coupon, "profile_gauge": geometry.build_profile_gauge}
     for part in PARTS:
+        if part == "roof_plate":  # a mesh from the pure-Python mesher: STL + 3MF, no STEP
+            mesh, pure = geometry.build_roof_plate(p, d)
+            export.bake(doc, part, [mesh])
+            paths, msgs = export.export_mesh_part(part, pure, OUT_DIR)
+            report.append("%s: mesh, %d faces" % (part, len(pure.faces)))
+            report.extend("  wrote " + x for x in paths)
+            report.extend("  PROBLEM: " + m for m in msgs)
+            continue
         to_export, to_bake, method = builders[part](p, d, tol)
         problems = geometry.check_solid(to_export, part)
         report.append("%s: built by %s, %.1f cm3" % (part, method, geometry.volume_cm3(to_export)))

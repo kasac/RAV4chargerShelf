@@ -86,24 +86,36 @@ Used by: shelf (fit coupon uses frame_height)
 | Name | Default | Unit | Range / choices | PH | Meaning |
 |---|---|---|---|---|---|
 | `wall_thickness` | 2 | mm | 0.8 .. 6 |  | Thickness of the shelf skirt, ribs and drawer walls. |
-| `deck_thickness` | 2.4 | mm | 1 .. 8 |  | Thickness of the perforated deck. |
+| `deck_thickness` | 2.4 | mm | 1 .. 8 |  | Thickness of the shelf deck. |
 | `frame_width` | 8 | mm | 3 .. 20 |  | Width of the solid rim around the grid, seen from above. |
 | `frame_height` | 8 | mm | 2 .. 30 |  | Height of the solid edge band, from the deck top down (skirt). This band is what touches the side walls. |
 | `rib_count` | 2 |  | 0 .. 10 |  | Number of stiffening ribs under the deck, running side to side. |
 | `rib_height` | 5 | mm | 0 .. 30 |  | Rib height below the deck. |
 
-## perforation
+## roof
 
-Used by: shelf, drawer (planned)
+Used by: roof plate
 
 | Name | Default | Unit | Range / choices | PH | Meaning |
 |---|---|---|---|---|---|
-| `grid_style` | hex |  | hex, square, diamond, round, slot, triangle |  | Perforation pattern. |
-| `cell_size` | 8 | mm | 3 .. 40 |  | Opening size of one grid cell (across flats for hex). |
-| `bar_width` | 1.8 | mm | 0.8 .. 10 |  | Width of the web between openings. At least 2 perimeters of your nozzle. |
-| `grid_angle` | 0 | deg | -90 .. 90 |  | Rotation of the grid pattern. |
-| `grid_enabled_shelf` | true |  | true / false |  | Perforate the shelf deck. |
-| `grid_enabled_drawer_floor` | true |  | true / false |  | Perforate the drawer floor. |
+| `roof_thickness` | 2 | mm | 0.8 .. 6 |  | Thickness of the roof plate. |
+| `roof_clearance` | 0.3 | mm | 0 .. 5 |  | Gap between the roof plate's front strip and the cubby roof. |
+| `roof_depression_start` | 15 | mm | 0 .. 80 |  | Front strip of the roof plate that stays at full height, from its front edge. |
+| `roof_depression_depth` | 4 | mm | 0 .. 15 |  | How much lower the rest of the roof plate is (clears the roof bulge and the LED). 0 = flat. |
+| `roof_depression_ramp` | 10 | mm | 1 .. 60 |  | Length of the smooth (cosine) transition. Longer = gentler overhang when printed standing; see max_overhang_deg. |
+
+## perforation
+
+Used by: roof plate (later also shelves)
+
+| Name | Default | Unit | Range / choices | PH | Meaning |
+|---|---|---|---|---|---|
+| `perforate_roof` | true |  | true / false |  | Perforate the roof plate (its lowered, flat part). |
+| `perforation_style` | teardrop |  | teardrop, diamond, none |  | Hole shape. Both print without support with the part standing on its rear edge: the upper edges rise at perforation_tip_angle. teardrop = round with a pointed top; diamond = straight bars of one width. |
+| `perforation_size` | 10 | mm | 3 .. 40 |  | Width of one hole. |
+| `perforation_open_fraction` | 0.5 |  | 0.05 .. 0.8 |  | Share of the perforated area that is open (material removed). The bar width follows from it. |
+| `perforation_tip_angle` | 45 | deg | 20 .. 45 |  | Angle of the holes' upper edges from vertical when printed standing. Smaller = taller holes, safer printing. |
+| `perforation_margin` | 5 | mm | 1 .. 30 |  | Solid border between the holes and the plate's edges. |
 
 ## drawer
 
@@ -152,7 +164,8 @@ Used by: checks, export
 
 | Name | Default | Unit | Range / choices | PH | Meaning |
 |---|---|---|---|---|---|
-| `min_bar_width` | 0.9 | mm | 0.2 .. 5 |  | Warn if grid bars are thinner (default = 2 perimeters at a 0.4 mm nozzle). |
+| `min_bar_width` | 0.9 | mm | 0.2 .. 5 |  | Warn if the bars between perforations are thinner (default = 2 perimeters at a 0.4 mm nozzle). |
+| `max_overhang_deg` | 45 | deg | 20 .. 60 |  | Steepest overhang (from vertical) for parts printed standing on their rear edge: the roof ramp and the rear corners are kept within it. |
 | `min_wall` | 0.9 | mm | 0.2 .. 5 |  | Warn if walls or rims are thinner. |
 | `min_deck_thickness` | 1.2 | mm | 0.2 .. 5 |  | Warn if the shelf deck is thinner. |
 | `arc_segments_per_90` | 8 |  | 2 .. 64 |  | Arc tessellation for the pure-Python STL/3MF export (segments per 90 degrees). |

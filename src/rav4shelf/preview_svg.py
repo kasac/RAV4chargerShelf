@@ -5,6 +5,7 @@
 * overview_svg     : plan, front and side views with the ports, the phone and
   the check results, to confirm the measurements were read the right way.
 * reference_overlay_svg : our outline drawn over a reference model's section.
+* roof_plate_svg   : the roof plate as printed (lip up) and its depression.
 """
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ import textwrap
 from typing import List, Sequence, Tuple
 from xml.sax.saxutils import escape
 
+from . import layout, perforation
 from .checks import Finding
 from .layout import (cubby_walls, led_keepout, phone_box, ports_box, profile_section,
                      shelf_outline)
@@ -307,3 +309,104 @@ def reference_overlay_svg(ref_segments, our_ring, lines: List[str], title: str) 
         s.add(_text(pad, y, line, 3.0))
         y += 4.6
     return s.render(2 * pad + (x1 - x0), y + pad, physical=False)
+
+
+# --------------------------------------------------------------------------
+# roof plate
+# --------------------------------------------------------------------------
+
+def roof_plate_svg(p: Params, d: Derived, mesh_grams: float = None) -> str:
+    """Plan of the roof plate with the lip at the top, as it stands in the
+    printer, plus a section through the middle showing the depression."""
+    outline = layout.roof_plate_outline(p, d)
+    pat = layout.roof_pattern(p)
+    holes = layout.roof_plate_holes(p, d, outline)
+    xmax = max(abs(x) for x, _ in outline)
+    y0, y1 = min(y for _, y in outline), max(y for _, y in outline)
+    pad, head = 14.0, 30.0
+    width = 2 * xmax + 2 * pad + 18.0 + 28.0  # arrow on the left, labels on the right
+
+    def fx(x):
+        return pad + 18.0 + xmax + x
+
+    def fy(y):  # lip at the top
+        return head + (y - y0)
+
+    s = _Svg()
+    s.add(_text(pad, 9, "Roof plate as printed: standing on its rear edge, lip at the top", 4.2,
+                weight="bold"))
+    s.add(_text(pad, 15, "Seen from above. Hole tips point to the lip, so they print without "
+                         "support; the rear corners are cut to the overhang limit.", 2.8,
+                color=C_DIM))
+    s.add('<polygon points="%s" fill="%s" fill-opacity="0.12" stroke="%s" stroke-width="0.45"/>'
+          % (_pts(outline, fx, fy), C_SHELF, C_SHELF))
+    for h in holes:
+        s.add('<polygon points="%s" fill="#ffffff" stroke="%s" stroke-width="0.25"/>'
+              % (_pts(h, fx, fy), C_WALL))
+    for y, label in ((d.y_front + p.roof_depression_start, "front strip ends"),
+                     (layout.roof_flat_from(p, d), "lowered from here")):
+        if p.roof_depression_depth > 0:
+            s.add('<line x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f" stroke="%s" stroke-width="0.3" '
+                  'stroke-dasharray="2,1.2"/>' % (fx(-xmax), fy(y), fx(xmax), fy(y), C_DIM))
+            s.add(_text(fx(xmax) + 1.5, fy(y) + 1, label, 2.4, color=C_DIM))
+    lx, ly, lr, _ = led_keepout(p)
+    if lr > 0:
+        s.add('<circle cx="%.2f" cy="%.2f" r="%.2f" fill="none" stroke="%s" stroke-width="0.45" '
+              'stroke-dasharray="2,1"/>' % (fx(lx), fy(ly), lr, C_LED))
+        s.add('<circle cx="%.2f" cy="%.2f" r="3" fill="%s"/>' % (fx(lx), fy(ly), C_LED))
+    ax = pad + 6.0
+    s.add('<line x1="%.2f" y1="%.2f" x2="%.2f" y2="%.2f" stroke="%s" stroke-width="0.5"/>'
+          % (ax, fy(y1), ax, fy(y0) + 4, C_DIM))
+    s.add('<path d="M%.2f %.2fl-2 4h4z" fill="%s"/>' % (ax, fy(y0), C_DIM))
+    s.add('<text x="%.2f" y="%.2f" font-size="2.6" fill="%s" text-anchor="middle" '
+          'transform="rotate(-90 %.2f %.2f)">print direction</text>'
+          % (ax - 2.5, (fy(y0) + fy(y1)) / 2, C_DIM, ax - 2.5, (fy(y0) + fy(y1)) / 2))
+    s.add(_text(fx(0), fy(y0) - 2.5, "front edge (lip side) = top of the print", 2.6, "middle",
+                C_DIM))
+    s.add(_text(fx(0), fy(y1) + 5, "rear edge on the bed", 2.6, "middle", C_DIM))
+
+    # section at x = 0, true length, heights x3
+    ex = 3.0
+    title_y = fy(y1) + 16.0
+    z_hi = p.H_cubby + 2.0
+    z_lo = p.H_cubby - p.roof_clearance - p.roof_depression_depth - p.roof_thickness - 2.0
+
+    def sx(y):
+        return fx(-xmax) + (y - y0)
+
+    def sz(z):
+        return title_y + 5.0 + (z_hi - z) * ex
+
+    s.add(_text(fx(-xmax), title_y, "Section through the middle (lip on the left, heights x%.0f)"
+                % ex, 3.2, weight="bold"))
+    steps = [y0 + (y1 - y0) * i / 240.0 for i in range(241)]
+    roof = [(y, roof_height(p, 0.0, y)) for y in steps]
+    s.add('<polyline points="%s" fill="none" stroke="%s" stroke-width="0.4"/>'
+          % (_pts(roof, sx, sz), C_WALL))
+    s.add(_text(sx(y1) + 1.5, sz(p.H_cubby) + 1, "cubby roof", 2.4, color=C_WALL))
+    plate = ([(y, layout.roof_plate_top(p, d, y)) for y in steps]
+             + [(y, layout.roof_plate_top(p, d, y) - p.roof_thickness) for y in reversed(steps)])
+    s.add('<polygon points="%s" fill="%s" fill-opacity="0.35" stroke="%s" stroke-width="0.3"/>'
+          % (_pts(plate, sx, sz), C_SHELF, C_SHELF))
+    s.add(_text(sx(y1) + 1.5, sz(layout.roof_plate_top(p, d, y1) - p.roof_thickness / 2) + 1,
+                "roof plate", 2.4, color=C_SHELF))
+
+    lines = ["front strip %.0f mm, then %.1f mm lower over a %.0f mm ramp (overhang %.0f deg, "
+             "limit %.0f)" % (p.roof_depression_start, p.roof_depression_depth,
+                              p.roof_depression_ramp, layout.roof_ramp_overhang_deg(p),
+                              p.max_overhang_deg)]
+    if pat is not None:
+        lines.append("%s holes %.0f mm, %d of them; %.0f %% open in the pattern, bars %.1f mm"
+                     % (pat.style, pat.width, len(holes), 100 * pat.open_fraction, pat.bar))
+        if lr > 0:
+            lines.append("LED free zone: %.0f %% open"
+                         % (100 * perforation.open_share(holes, lx, ly, lr)))
+    else:
+        lines.append("not perforated")
+    if mesh_grams is not None:
+        lines.append("about %.0f g PETG" % mesh_grams)
+    ty = sz(z_lo) + 8.0
+    for i, line in enumerate(lines):
+        s.add(_text(fx(-xmax), ty + 4.5 * i, line, 3.0))
+    height = ty + 4.5 * len(lines) + pad
+    return s.render(width, height, physical=False)

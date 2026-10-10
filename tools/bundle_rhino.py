@@ -14,8 +14,8 @@ import os
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir))
 OUT = os.path.join(REPO, "rhino", "rav4shelf_rhino.py")
 # load order: a module comes after everything it imports at module level
-MODULES = ["__init__", "geom2d", "params", "layout", "checks", "meshing", "fileio", "geometry",
-           "export", "gh"]
+MODULES = ["__init__", "geom2d", "params", "perforation", "layout", "checks", "meshing", "fileio",
+           "geometry", "export", "gh"]
 
 HEADER = '''#! python3
 """RAV4chargerShelf - all-in-one script for Rhino 8 and Grasshopper.
@@ -62,9 +62,9 @@ MY_VALUES = {
     # "H_ports_top": 40.0,
 }
 
-# What to build: "fit_coupon", "profile_gauge" (the two test prints) and
-# "envelope" (the cubby as a solid, to design against).
-BUILD = ["fit_coupon", "profile_gauge", "envelope"]
+# What to build: "fit_coupon", "profile_gauge" (the two test prints), "envelope"
+# (the cubby as a solid, to design against) and "roof_plate" (lowered, perforated).
+BUILD = ["fit_coupon", "profile_gauge", "envelope", "roof_plate"]
 
 # Show the cubby wireframe, the plug cluster, the phone and the free zone
 # around the roof LED as reference.
@@ -145,7 +145,7 @@ def main():
         print("Run this inside Rhino 8 (ScriptEditor) or a Grasshopper Python 3 Script component.")
         return
     _install()
-    from rav4shelf import checks, export, geometry, gh, params
+    from rav4shelf import checks, export, geometry, gh, meshing, params
 
     g = globals()
     component = g["ghenv"].Component if "ghenv" in g else None
@@ -166,7 +166,7 @@ def main():
         report.append(("WARNING: " if component else "STOP: ") + units)
     if checks.has_errors(findings) or (units and component is None):
         report.append("Nothing built: fix the problems above.")
-        _finish(component, report, {}, None, {})
+        _finish(component, report, {}, None, {}, None)
         return
     tol = min(doc.ModelAbsoluteTolerance, geometry.DEFAULT_TOL)
 
@@ -182,6 +182,10 @@ def main():
     for name, (solid, _) in parts.items():
         report += ["  PROBLEM: " + m for m in geometry.check_solid(solid, name)]
     envelope = geometry.build_envelope(p, d, tol) if "envelope" in BUILD else None
+    roof = geometry.build_roof_plate(p, d) if "roof_plate" in BUILD else None  # (mesh, pure)
+    if roof is not None:
+        report.append("roof_plate: %d faces, ~%.0f g PETG" % (len(roof[1].faces),
+                                                            meshing.petg_grams(roof[1])))
     context = geometry.build_context(p, d) if SHOW_CUBBY else {}
 
     folder = _export_folder(component)
@@ -189,6 +193,9 @@ def main():
         for name, (solid, _) in parts.items():
             paths, msgs = export.export_part(name, [solid], folder, ("step", "3mf", "stl"), tol,
                                              doc if component is None else None)
+            report += ["  wrote " + x for x in paths] + ["  PROBLEM: " + m for m in msgs]
+        if roof is not None:
+            paths, msgs = export.export_mesh_part("roof_plate", roof[1], folder)
             report += ["  wrote " + x for x in paths] + ["  PROBLEM: " + m for m in msgs]
     elif component is not None and g.get("export"):
         report.append("export: save the .gh file first, or set EXPORT_FOLDER")
@@ -199,10 +206,10 @@ def main():
     if p.placeholders:
         report.append("%d values are not confirmed for your car yet (see the report above)."
                       % len(p.placeholders))
-    _finish(component, report, parts, envelope, context)
+    _finish(component, report, parts, envelope, context, roof[0] if roof else None)
 
 
-def _finish(component, report, parts, envelope, context):
+def _finish(component, report, parts, envelope, context, roof=None):
     text = "\n".join(report)
     if component is None:  # Rhino: bake to layers
         import Rhino
@@ -214,6 +221,8 @@ def _finish(component, report, parts, envelope, context):
             export.bake(doc, name, [shown])
         if envelope is not None:
             export.bake(doc, "envelope", [envelope])
+        if roof is not None:
+            export.bake(doc, "roof_plate", [roof])
         doc.Views.Redraw()
         print(text)
         return
@@ -221,6 +230,7 @@ def _finish(component, report, parts, envelope, context):
     g["coupon"] = parts.get("fit_coupon", (None, None))[1]
     g["gauge"] = parts.get("profile_gauge", (None, None))[1]
     g["envelope"] = envelope
+    g["roof"] = roof
     g["cubby"] = sum((context.get(k, []) for k in ("cubby", "led_keepout", "ports", "phone")), [])
     g["report"] = text
 

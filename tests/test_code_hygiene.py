@@ -17,8 +17,8 @@ ALL_PY = sorted(
     + glob.glob(os.path.join(REPO, "tools", "*.py"))
 )
 
-PURE = ["geom2d", "params", "layout", "checks", "meshing", "fileio", "reference", "preview_svg",
-        "cli"]
+PURE = ["geom2d", "params", "perforation", "layout", "checks", "meshing", "fileio", "reference",
+        "preview_svg", "cli"]
 RHINO_ONLY = ("Rhino", "System", "Grasshopper", "rhinoscriptsyntax", "scriptcontext")
 
 

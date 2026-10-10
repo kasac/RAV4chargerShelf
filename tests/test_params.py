@@ -19,14 +19,15 @@ def test_brief_parameters_exist():
         "W_ref", "wall_lean_deg", "wall_radius", "D_cubby", "H_cubby", "H_ports_top", "X_ports",
         "shelf_height", "front_recess", "port_notch_width", "port_notch_offset_x",
         "phone_clearance_min", "wall_thickness", "deck_thickness", "frame_width",
-        "rib_count", "rib_height", "grid_style", "cell_size", "bar_width", "grid_angle",
-        "grid_enabled_shelf", "grid_enabled_drawer_floor", "drawer_type", "drawer_height",
+        "rib_count", "rib_height", "perforation_style", "perforation_size",
+        "perforation_open_fraction", "perforate_roof", "drawer_type", "drawer_height",
         "drawer_depth", "drawer_width", "hinge_position", "open_angle", "detent_strength",
         "pin_diameter", "clearance_sliding", "clearance_hinge", "clearance_press_fit",
     ]
     missing = [n for n in required if n not in spec]
     assert not missing
-    assert set(["hex", "square", "diamond", "round", "slot"]) <= set(spec["grid_style"]["choices"])
+    # only shapes that print without support standing on the rear edge
+    assert set(spec["perforation_style"]["choices"]) == {"teardrop", "diamond", "none"}
 
 
 def test_all_cubby_measurements_are_marked_placeholder(p):
@@ -74,8 +75,8 @@ def test_override_file_and_comments(tmp_path):
     ({"W_ref": "wide"}, "must be a number"),
     ({"W_ref": True}, "must be a number"),
     ({"rib_count": 2.5}, "whole number"),
-    ({"grid_style": "stars"}, "must be one of"),
-    ({"grid_enabled_shelf": "maybe"}, "true or false"),
+    ({"perforation_style": "stars"}, "must be one of"),
+    ({"perforate_roof": "maybe"}, "true or false"),
     ({"W_ref": None}, "may not be null"),
 ])
 def test_invalid_overrides_raise(p, bad, fragment):
@@ -98,9 +99,9 @@ def test_auto_params_accept_null_and_derive(p):
 
 
 def test_gh_style_values_are_coerced(p):
-    p2 = p.with_overrides({"grid_style": '"square"', "grid_enabled_shelf": 0, "W_ref": "199.5"})
-    assert p2.grid_style == "square"
-    assert p2.grid_enabled_shelf is False
+    p2 = p.with_overrides({"perforation_style": '"diamond"', "perforate_roof": 0, "W_ref": "199.5"})
+    assert p2.perforation_style == "diamond"
+    assert p2.perforate_roof is False
     assert p2.W_ref == 199.5
 
 

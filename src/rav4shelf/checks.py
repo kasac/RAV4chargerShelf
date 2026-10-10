@@ -5,9 +5,11 @@ be built, but something is likely wrong), "info" (worth knowing).
 """
 from __future__ import annotations
 
+import math
 from typing import List
 
-from .geom2d import GeometryError, is_simple
+from . import layout, perforation
+from .geom2d import GeometryError, is_simple, point_in_polygon
 from .layout import coupon_profile, shelf_outline
 from .params import Derived, ParamError, Params, cubby_width, roof_height
 
@@ -91,11 +93,6 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
         add("warning", "led_position",
             "the free zone around the roof LED (diameter %.0f at x %.1f, y %.1f) reaches outside "
             "the cubby: check led_x and led_y" % (p.led_keepout_diameter, p.led_x, p.led_y))
-    if p.roof_bulge_depth > 0 and p.roof_bulge_diameter > p.led_keepout_diameter:
-        add("info", "roof_bulge",
-            "the roof bulge (diameter %.0f, %.1f mm deep) is wider than the LED free zone "
-            "(%.0f): parts near the roof must clear it, and the envelope solid has a flat roof"
-            % (p.roof_bulge_diameter, p.roof_bulge_depth, p.led_keepout_diameter))
 
     # -- insertion through the lip ---------------------------------------------
     if d.shelf_width_max > p.W_lip:
@@ -112,8 +109,8 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
 
     # -- printability ----------------------------------------------------------
     for name, minimum in (("coupon_rim_width", p.min_wall), ("wall_thickness", p.min_wall),
-                          ("deck_thickness", p.min_deck_thickness),
-                          ("bar_width", p.min_bar_width)):
+                          ("roof_thickness", p.min_wall),
+                          ("deck_thickness", p.min_deck_thickness)):
         if p[name] < minimum:
             add("warning", "thin_" + name,
                 "%s = %.2f mm is below the minimum %.2f mm" % (name, p[name], minimum))
@@ -124,6 +121,9 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
     if p.coupon_plate_thickness < 0.6:
         add("warning", "coupon_plate_thin",
             "coupon plate %.2f mm is only 2-3 layers and may warp" % p.coupon_plate_thickness)
+
+    # -- roof plate (a part of its own: problems here never stop the test prints)
+    _check_roof(p, d, add)
 
     # -- outlines can be built -------------------------------------------------
     try:
@@ -140,6 +140,56 @@ def run_checks(p: Params, d: Derived) -> List[Finding]:
         add("error", "geometry", str(exc))
 
     return out
+
+
+def _check_roof(p: Params, d: Derived, add) -> None:
+    limit = p.max_overhang_deg
+    ramp = layout.roof_ramp_overhang_deg(p)
+    if ramp > limit + 1e-9:
+        need = math.pi / 2.0 * p.roof_depression_depth / math.tan(math.radians(limit))
+        add("warning", "roof_ramp_steep",
+            "the roof plate's ramp overhangs %.0f deg when printed standing (limit %.0f): make "
+            "roof_depression_ramp at least %.1f mm" % (ramp, limit, need))
+    try:
+        outline = layout.roof_plate_outline(p, d)
+        pat = layout.roof_pattern(p)
+        holes = layout.roof_plate_holes(p, d, outline)
+    except (GeometryError, ParamError) as exc:
+        add("warning", "roof_plate", "roof plate: %s" % exc)
+        return
+    if pat is not None:
+        if pat.bar < p.min_bar_width:
+            add("warning", "thin_perforation_bars",
+                "the bars between the roof plate's holes are %.2f mm, below min_bar_width %.2f: "
+                "lower perforation_open_fraction or use larger holes" % (pat.bar, p.min_bar_width))
+        if p.perforation_tip_angle > limit:
+            add("warning", "perforation_overhang",
+                "perforation_tip_angle %.0f deg is above max_overhang_deg %.0f"
+                % (p.perforation_tip_angle, limit))
+    # the plate's top must stay below the cubby roof; only the bulge comes lower
+    # than the flat roof, so sample its circle
+    worst, at = 0.0, None
+    r_b = p.roof_bulge_diameter / 2.0
+    n = 24
+    for i in range(n + 1):
+        for j in range(n + 1):
+            x = p.led_x - r_b + 2.0 * r_b * i / n
+            y = p.led_y - r_b + 2.0 * r_b * j / n
+            if point_in_polygon((x, y), outline):
+                gap = roof_height(p, x, y) - layout.roof_plate_top(p, d, y)
+                if gap < worst:
+                    worst, at = gap, (x, y)
+    if at is not None:
+        add("warning", "roof_plate_hits_roof",
+            "the roof plate reaches %.1f mm into the roof at x %.0f, y %.0f (the bulge around "
+            "the LED): increase roof_depression_depth or roof_depression_start, or check led_y "
+            "and the roof_bulge values" % (-worst, at[0], at[1]))
+    r = p.led_keepout_diameter / 2.0
+    if r > 0:
+        share = perforation.open_share(holes, p.led_x, p.led_y, r)
+        add("info", "roof_covers_led",
+            "the roof plate spans the LED free zone; %.0f %% of it is open through the "
+            "perforations" % (100.0 * share))
 
 
 def _check_ports(p: Params, d: Derived, add) -> None:
